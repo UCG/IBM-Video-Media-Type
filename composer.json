@@ -1,0 +1,14 @@
+{
+  "name": "ucg/ibm_video_media_type",
+  "description": "Provides a media type for IBM Video's streaming/storage service.",
+  "type": "drupal-custom-module",
+  "authors": [
+    {
+      "name": "Duncan McClenagan",
+      "email": "duncan_mcclenagan@ucg.org"
+    }
+  ],
+  "require": {
+    "php": ">=7.4"
+  }
+}
