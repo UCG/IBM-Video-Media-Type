@@ -5,7 +5,6 @@ declare (strict_types = 1);
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceFieldConstraintsInterface;
-use Ranine\Helper\ThrowHelpers;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -28,10 +27,13 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     if (!is_string($name)) {
       throw new \InvalidArgumentException('$name is not a string.');
     }
+    /** @var string $name */
 
     // The video configuration (URL, autoplay flag, etc.) is stored in the
-    // source field as a JSON-encoded string. Grab and decode this JSON,
-    // and try to return the value corresponding to $name.
+    // source field as a JSON-encoded string. Grab and decode this JSON, and try
+    // to return the value corresponding to $name. Return NULL if 1) $name does
+    // not correspond to an existing metadata property, or 2) $name is not one
+    // of the possible valid metadata properties.
 
     $videoConfigurationJson = (string) $this->getSourceFieldValue($media);
     if ($videoConfigurationJson === '') {
@@ -123,10 +125,31 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   /**
    * {@inheritdoc}
    */
+  public function getSourceFieldConstraints() {
+    return [
+      'ibm_video_configuration' => [],
+    ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) : IbmVideo {
     // We call parent::create() instead of invoking our own constructor, because
     // Drupal plugin constructors are technically not part of the public API.
     return parent::create($container, $configuration, $plugin_id, $plugin_definition);
+  }
+
+  /**
+   * Throws an exception saying the source field of a media entity is invalid.
+   *
+   * @param string $entityVariableName
+   *   Media entity variable name (to use in the exception).
+   *
+   * @throws \InvalidArgumentException
+   */
+  private static function throwSourceFieldInvalidException(string $entityVariableName) : void {
+    throw new \InvalidArgumentException('The source field for $' . $entityVariableName . ' is corrupt.');
   }
 
 }
