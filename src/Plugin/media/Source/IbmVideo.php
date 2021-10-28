@@ -2,6 +2,8 @@
 
 declare (strict_types = 1);
 
+namespace Drupal\ibm_video_media_type\Plugin\media\Source;
+
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceFieldConstraintsInterface;
@@ -51,8 +53,8 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
 
     // Check to ensure $name is valid.
     switch ($name) {
-      case 'url':
-        if (!is_string($videoConfiguration['url'])) {
+      case 'videoId':
+        if (!is_string($videoConfiguration['videoId'])) {
           static::throwSourceFieldInvalidException('media');
         }
         break;
@@ -70,7 +72,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
         break;
 
       case 'displayControls':
-        if (!is_bool($videoConfiguration['useHtml5Ui'])) {
+        if (!is_bool($videoConfiguration['displayControls'])) {
           static::throwSourceFieldInvalidException('media');
         }
         break;
@@ -94,7 +96,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
         break;
 
       case 'defaultQuality':
-        if (!is_bool($videoConfiguration['useHtml5Ui'])) {
+        if (!is_string($videoConfiguration['defaultQuality'])) {
           static::throwSourceFieldInvalidException('media');
         }
         break;
@@ -111,13 +113,13 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    */
   public function getMetadataAttributes() {
     return [
-      'url' => $this->t('The base embed URL of the video'),
+      'videoId' => $this->t('The IBM video ID'),
       'useAutoplay' => $this->t('Whether to start playback immediately after iFrame loads (HTML autoplay not supported on iOS)'),
       'useHtml5Ui' => $this->t('Whether to use the new HTML5 player UI'),
       'displayControls' => $this->t('Whether to display the video playback controls'),
       'initialVolume' => $this->t('Initial video volume in %'),
       'showTitle' => $this->t('Whether to show the channel or video title on the bottom left'),
-      'wMode' =>  $this->t('Flash wmode parameter -- not applicable for HTML5 player. Should be either "direct," "opaque," "transparent," or "window."'),
+      'wMode' => $this->t('Flash wmode parameter -- not applicable for HTML5 player. Should be either "direct," "opaque," "transparent," or "window."'),
       'defaultQuality' => $this->t('Default stream playback quality -- should be either "low," "med," or "high"'),
     ];
   }
