@@ -4,9 +4,14 @@ declare (strict_types = 1);
 
 namespace Drupal\ibm_video_media_type\Plugin\media\Source;
 
+use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
+use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\field\FieldConfigInterface;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceFieldConstraintsInterface;
+use Drupal\media\MediaTypeInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -20,7 +25,18 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   default_thumbnail_filename = "no-thumbnail.png",
  * )
  */
-class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInterface {
+class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInterface, ContainerFactoryPluginInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public function createSourceField(MediaTypeInterface $type) : FieldConfigInterface {
+    // Adapted from source of @see \Drupal\media\Plugin\media\Source\OEmbed.
+    $label = (string) $this->t('@type configuration', [
+      '@type' => $this->getPluginDefinition()['label'],
+    ]);
+    return parent::createSourceField($type)->set('label', $label);
+  }
 
   /**
    * {@inheritdoc}
@@ -131,6 +147,20 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     return [
       'ibm_video_configuration' => [],
     ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function prepareFormDisplay(MediaTypeInterface $type, EntityFormDisplayInterface $display) : void {
+    throw new \RuntimeException('Method not implemented.');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function prepareViewDisplay(MediaTypeInterface $type, EntityViewDisplayInterface $display) : void {
+    throw new \RuntimeException('Method not implemented.');
   }
 
   /**
