@@ -16,7 +16,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   id = "ibm_video",
  *   label = @Translation("IBM Video"),
  *   description = @Translation("Handles implementation logic for IBM Video media source."),
- *   allowed_field_types = {"string"},
+ *   allowed_field_types = {"string_long"},
  *   default_thumbnail_filename = "no-thumbnail.png",
  * )
  */
@@ -42,7 +42,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       return NULL;
     }
 
-    $videoConfiguration = json_decode($videoConfigurationJson);
+    $videoConfiguration = json_decode($videoConfigurationJson, TRUE);
     if (!is_array($videoConfiguration)) {
       static::throwSourceFieldInvalidException('media');
     }
@@ -119,8 +119,8 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       'displayControls' => $this->t('Whether to display the video playback controls'),
       'initialVolume' => $this->t('Initial video volume in %'),
       'showTitle' => $this->t('Whether to show the channel or video title on the bottom left'),
-      'wMode' => $this->t('Flash wmode parameter -- not applicable for HTML5 player. Should be either "direct," "opaque," "transparent," or "window."'),
-      'defaultQuality' => $this->t('Default stream playback quality -- should be either "low," "med," or "high"'),
+      'wMode' => $this->t('Flash wmode parameter -- not applicable for HTML5 player. Should be either "direct", "opaque", "transparent", or "window".'),
+      'defaultQuality' => $this->t('Default stream playback quality -- should be either "low", "med", or "high"'),
     ];
   }
 
