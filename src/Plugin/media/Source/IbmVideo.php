@@ -153,14 +153,35 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    * {@inheritdoc}
    */
   public function prepareFormDisplay(MediaTypeInterface $type, EntityFormDisplayInterface $display) : void {
-    throw new \RuntimeException('Method not implemented.');
+    // Let the parent class do whatever it needs to the form display first, so
+    // we can later override what we need to override.
+    parent::prepareFormDisplay($type, $display);
+
+    // Taken partially from source for
+    // @see \Drupal\media\Plugin\media\Source\OEmbed.
+    $sourceFieldName = $this->getSourceFieldDefinition($type)->getName();
+    $display->setComponent($sourceFieldName, [
+    // Make sure the source field for the media type has the correct form
+    // widget.
+      'type' => 'ibm_video_input',
+      'weight' => $display->getComponent($sourceFieldName)['weight'],
+    ]);
+    $display->removeComponent('name');
   }
 
   /**
    * {@inheritdoc}
    */
   public function prepareViewDisplay(MediaTypeInterface $type, EntityViewDisplayInterface $display) : void {
-    throw new \RuntimeException('Method not implemented.');
+    // Let the parent class do whatever it needs to the view display first, so
+    // we can later override what we need to override.
+    parent::prepareViewDisplay($type, $display);
+    // Make sure the source field for the media type is set to the correct field
+    // formatter, and ensure the label is hidden.
+    $display->setComponent($this->getSourceFieldDefinition($type)->getName(), [
+      'type' => 'ibm_video',
+      'label' => 'visually_hidden',
+    ]);
   }
 
   /**
