@@ -27,11 +27,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInterface, ContainerFactoryPluginInterface {
 
-  // @todo Replace source field with single "string" field representing video
+  // @todo Replace source field with data containing only video ID, width, and
+  // aspect ratio (and the width can be NULL).
   // ID; move other settings to field formatter settings.
   // @todo Finish field formatter.
   // @todo Finish field formatter settings schema and form.
-  // @todo Finish field form widget.
+  // @todo Finish field formatter form widget.
+  // @todo Finish video source field widget.
   // @todo Finish default bundle for IBM video.
   // @todo Check over and see if anything else needed.
 
