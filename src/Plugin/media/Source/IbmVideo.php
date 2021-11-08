@@ -137,7 +137,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   /**
    * {@inheritdoc}
    */
-  public function getMetadataAttributes() {
+  public function getMetadataAttributes() : array {
     return [
       'videoId' => $this->t('The IBM video ID'),
       'useAutoplay' => $this->t('Whether to start playback immediately after iFrame loads (HTML autoplay not supported on iOS)'),
@@ -153,7 +153,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   /**
    * {@inheritdoc}
    */
-  public function getSourceFieldConstraints() {
+  public function getSourceFieldConstraints() : array {
     return [
       'ibm_video_configuration' => [],
     ];
