@@ -5,6 +5,7 @@ declare (strict_types = 1);
 namespace Drupal\ibm_video_media_type\Plugin\FieldFormatter;
 
 use Drupal\Component\Utility\UrlHelper;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo;
@@ -48,9 +49,8 @@ class IbmVideoFormatter extends FormatterBase {
    * {@inheritdoc}
    */
   public function viewElements(FieldItemListInterface $items, $langcode) : array {
-    // Generate the video embed URL from the entity associated with $items.
-    // @todo Get the URL without going through the media source and
-    // getMetadata().
+    // Get the media source from the entity associated with $items.
+    // @todo Remove dependency on media source and getMetadata().
     $media = $items->getEntity();
     if (!($media instanceof MediaInterface)) {
       throw new \InvalidArgumentException('$items contains a field whose entity is not a media entity.');
@@ -61,7 +61,16 @@ class IbmVideoFormatter extends FormatterBase {
       throw new \InvalidArgumentException('$items contains a field whose entity has a source of the wrong type.');
     }
     /** @var \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo $source */
+
     $videoEmbedUrl = $this->generateVideoUrl($source->getMetadata($media, 'baseUrl'));
+    $maxWidthPx = $source->getMetadata($media, 'maxWidth');
+    $aspectRatio = $source->getMetadata($media, 'aspectRatio');
+    /** @var int|null $maxWidthPx */
+    /** @var double $aspectRatio */
+    // Convert the aspect ratio to a padding % (the height as a percentage of
+    // the width):
+    $bottomPaddingPercentage = 100 / $aspectRatio;
+    /** @var float $bottomPaddingPercentage */
 
     $renderElement = [];
     foreach ($items as $delta => $item) {
@@ -84,31 +93,54 @@ class IbmVideoFormatter extends FormatterBase {
       // width and height to 100%.
       // This should ensure the video is rendered at the maximum possible size,
       // filling the parent container if possible.
+
+      // First, set the attributes for the outer <div> based on whether the max
+      // width is defined.
+      if ($maxWidthPx === NULL) {
+        $outerDivAttributes = [
+          'class' => 'ibm-video__outer_container--no-max-width'
+        ];
+      }
+      else {
+        $outerDivAttributes = [
+          'class' => ['ibm-video__outer_container'],
+          'style' => ('width: ' . $maxWidthPx),
+        ];
+      }
+
       $renderElement[$delta] = [
         '#type' => 'html_tag',
         '#tag' => 'div',
-        '#attributes' => [
-          // @todo.
-        ],
+        '#attributes' => $outerDivAttributes,
         '#attached' => [
-          'library' => [/** @todo. */],
+          'library' => ['ibm_video_media_type/ibm_video_formatter'],
         ],
         [
           '#type' => 'html_tag',
           '#tag' => 'div',
           '#attributes' => [
-            // @todo.
+            'class' => ['ibm-video__inner_container'],
+            'style' => ('padding-bottom: ' . number_format($bottomPaddingPercentage, 2, '.')),
           ],
           [
             '#type' => 'html_tag',
             '#tag' => 'iframe',
             '#attributes' => [
-              // @todo.
-            ]
-          ]
-        ]
+              'src' => $videoEmbedUrl,
+              'frameborder' => 0,
+              'scrolling' => FALSE,
+              'allowtransparency' => TRUE,
+              'allowfullscreen' => TRUE,
+              'mozallowfullscreen' => TRUE,
+              'width' => '100%',
+              'height' => '100%',
+              'class' => ['ibm-video__iframe'],
+            ],
+          ],
+        ],
       ];
-      // @todo: Add cacheability metadata.
+      // Add the cache metadata associated with the parent media entity.
+      CacheableMetadata::createFromObject($media)->applyTo($renderElement[$delta]);
     }
 
     return $renderElement;
@@ -123,6 +155,7 @@ class IbmVideoFormatter extends FormatterBase {
    *   Base URL (without query string) to use.
    */
   private function generateVideoUrl(string $baseUrl) : string {
+    // @todo: Redo.
     $queryString = UrlHelper::buildQuery(ExtendableIterable::from(static::PLAYER_SETTINGS_AND_DEFAULTS)
       ->map(fn($setting) => $this->getSetting($setting))
       ->filter(fn($setting, $value) => $value !== NULL)
