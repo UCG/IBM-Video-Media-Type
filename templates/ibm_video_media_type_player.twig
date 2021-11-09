@@ -1,0 +1,30 @@
+{#
+/**
+ * @file
+ * Default theme implementation for the IBM video player.
+ *
+ * Available variables:
+ * - videoUrl: Embed URL for the video (string).
+ *
+ * @ingroup themeable
+ */
+#}
+
+{# The container <div> is set w/ a width of 100% and a bottom padding of 56.25%,
+in order to ensure it fills the parent container and has the correct aspect
+ratio (the percentage is relative to the width of the parent container). This
+<div> is positioned relatively so that the inner <iframe> can be positioned
+absolutely, but with reference to this <div>.
+#}
+<div class="ibm-video__container">
+  {#
+  This inner <iframe> has a width of 100% and a height of 100%, to fill its
+  parent container. It is positioned absolutely so that it is removed from the
+  normal flow (so that the "padding-bottom" can be used in the <div> above to
+  set that container's height).
+  #}
+  <iframe src="{{ videoUrl }}" class="ibm-video__iframe" width="100%"
+    height="100%" frameborder="0" allowfullscreen mozallowfullscreen
+    webkitallowfullscreen allowtransparency>
+  </iframe>
+</div>

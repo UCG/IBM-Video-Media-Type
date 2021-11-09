@@ -1,4 +1,4 @@
-ibm_video_formatter:
+ibm_video_player:
   css:
     component:
-      css/ibm_video_formatter.css: {}
+      css/ibm_video_player.css: {}

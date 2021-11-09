@@ -15,6 +15,10 @@ use Ranine\Iteration\ExtendableIterable;
 /**
  * Formats the IBM video media type source field.
  *
+ * @todo Create config schema for settings.
+ * @todo Override settingsForm() and settingsSummary(). Add validation for
+ * settings, and ensure validation is also performed before settings are used.
+ *
  * @FieldFormatter(
  *   id = "ibm_video",
  *   label = @Translation("IBM video"),
@@ -49,8 +53,7 @@ class IbmVideoFormatter extends FormatterBase {
    * {@inheritdoc}
    */
   public function viewElements(FieldItemListInterface $items, $langcode) : array {
-    // Get the media source from the entity associated with $items.
-    // @todo Remove dependency on media source and getMetadata().
+    // Get the media source and media entity associated with $items.
     $media = $items->getEntity();
     if (!($media instanceof MediaInterface)) {
       throw new \InvalidArgumentException('$items contains a field whose entity is not a media entity.');
@@ -62,82 +65,12 @@ class IbmVideoFormatter extends FormatterBase {
     }
     /** @var \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo $source */
 
-    $videoEmbedUrl = $this->generateVideoUrl($source->getMetadata($media, 'baseUrl'));
-    $maxWidthPx = $source->getMetadata($media, 'maxWidth');
-    $aspectRatio = $source->getMetadata($media, 'aspectRatio');
-    /** @var int|null $maxWidthPx */
-    /** @var double $aspectRatio */
-    // Convert the aspect ratio to a padding % (the height as a percentage of
-    // the width):
-    $bottomPaddingPercentage = 100 / $aspectRatio;
-    /** @var float $bottomPaddingPercentage */
-
+    $videoEmbedUrl = $this->generateVideoUrl($source->getMetadata($media, 'channelId'), $source->getMetadata($media, 'channelVideoId'));
     $renderElement = [];
     foreach ($items as $delta => $item) {
-      // Render each item as a nested group of three HTML elements:
-      // 1) The outermost element is a <div> sets the width of the video. Thi
-      // <div> has a width equal to the maximum width of the video (if it is
-      // defined). If this maximum is not defined, the width is set to 100% to
-      // fill the parent container. Otherwise, the maximum width of the <div> is
-      // set to 100% to ensure the video does not overflow its parent container.
-      // 2) The <div> above has a nested <div> with a bottom padding sufficient
-      // to make its width/height (aspect) ratio correct for the contained
-      // video. A nested <div> is used because a percentage "padding-bottom"
-      // value is relative to the width of the *parent* element, not the element
-      // itself. This nested <div> is positioned relatively so that the absolute
-      // positioning of the <iframe> below is relative to this <div>.
-      // 3) The innermost element: a nested <iframe> which points to the video
-      // player itself. This is positioned absolutely, which removes it from the normal flow so that it
-      // does not affect the height of the parent <div> described above. The
-      // parent <div> defines the sizing of the <iframe>, so we just set its
-      // width and height to 100%.
-      // This should ensure the video is rendered at the maximum possible size,
-      // filling the parent container if possible.
-
-      // First, set the attributes for the outer <div> based on whether the max
-      // width is defined.
-      if ($maxWidthPx === NULL) {
-        $outerDivAttributes = [
-          'class' => 'ibm-video__outer_container--no-max-width'
-        ];
-      }
-      else {
-        $outerDivAttributes = [
-          'class' => ['ibm-video__outer_container'],
-          'style' => ('width: ' . $maxWidthPx),
-        ];
-      }
-
       $renderElement[$delta] = [
-        '#type' => 'html_tag',
-        '#tag' => 'div',
-        '#attributes' => $outerDivAttributes,
-        '#attached' => [
-          'library' => ['ibm_video_media_type/ibm_video_formatter'],
-        ],
-        [
-          '#type' => 'html_tag',
-          '#tag' => 'div',
-          '#attributes' => [
-            'class' => ['ibm-video__inner_container'],
-            'style' => ('padding-bottom: ' . number_format($bottomPaddingPercentage, 2, '.')),
-          ],
-          [
-            '#type' => 'html_tag',
-            '#tag' => 'iframe',
-            '#attributes' => [
-              'src' => $videoEmbedUrl,
-              'frameborder' => 0,
-              'scrolling' => FALSE,
-              'allowtransparency' => TRUE,
-              'allowfullscreen' => TRUE,
-              'mozallowfullscreen' => TRUE,
-              'width' => '100%',
-              'height' => '100%',
-              'class' => ['ibm-video__iframe'],
-            ],
-          ],
-        ],
+        '#theme' => 'ibm_video_media_type_player',
+        '#videoUrl' => $videoEmbedUrl,
       ];
       // Add the cache metadata associated with the parent media entity.
       CacheableMetadata::createFromObject($media)->applyTo($renderElement[$delta]);
@@ -147,15 +80,19 @@ class IbmVideoFormatter extends FormatterBase {
   }
 
   /**
-   * Generates and returns an embed URL for the IBM video w/ the given video ID.
+   * Generates and returns an embed URL for the given IBM video.
    *
    * Uses the current settings to set the video player properties.
    *
-   * @param string $baseUrl
-   *   Base URL (without query string) to use.
+   * @param string $channelId
+   *   Video channel ID.
+   * @param string $channelVideoId
+   *   The ID of the video within the channel (not the unique video ID).
+   *
+   * @return string
+   *   Embed URL. This URL is protocol-independent (starts with "//").
    */
-  private function generateVideoUrl(string $baseUrl) : string {
-    // @todo: Redo.
+  private function generateVideoUrl(string $channelId, string $channelVideoId) : string {
     $queryString = UrlHelper::buildQuery(ExtendableIterable::from(static::PLAYER_SETTINGS_AND_DEFAULTS)
       ->map(fn($setting) => $this->getSetting($setting))
       ->filter(fn($setting, $value) => $value !== NULL)
@@ -174,7 +111,7 @@ class IbmVideoFormatter extends FormatterBase {
           return (string) $value;
         }
       })->toArray());
-    return $baseUrl . '?' . $queryString;
+    return '//video.ibm.com/channel/' . $channelId . '/video/' . $channelVideoId . '?' . $queryString;
   }
 
 }

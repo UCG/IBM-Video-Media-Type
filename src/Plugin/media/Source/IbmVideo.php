@@ -15,7 +15,17 @@ use Drupal\media\MediaTypeInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Provides media type plugin for Flickr.
+ * Defines the media type plugin for embedded IBM videos or streams.
+ *
+ * @todo Replace source field with data containing only channel ID and channel
+ * video ID. Ensure source field data is validated when pulled as metadata, and
+ * with a validation constraint. Consider extracting the code
+ * extracting/validating the metadata and using the extracted methods to perform
+ * these operations when the field has already been obtained. The extracted
+ * methods may be static or instance methods on this plugin class.
+ * @todo Define a widget for this media source, which uses an embed URL to
+ * extract the channel ID and channel video ID. Ensure validation is correctly
+ * performed.
  *
  * @MediaType(
  *   id = "ibm_video",
@@ -27,11 +37,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInterface, ContainerFactoryPluginInterface {
 
-  // @todo Replace source field with data containing only video ID, width, and
+  // @todo , width, and
   // aspect ratio (and the width can be NULL).
   // ID; move other settings to field formatter settings.
-  // @todo Finish field formatter.
-  // @todo Finish field formatter settings schema and form.
   // @todo Finish field formatter form widget.
   // @todo Finish video source field widget.
   // @todo Finish default bundle for IBM video.
