@@ -1,0 +1,4 @@
+ibm_video_formatter:
+  css:
+    component:
+      css/ibm_video_formatter.css: {}

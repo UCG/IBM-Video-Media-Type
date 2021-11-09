@@ -1,0 +1,4 @@
+ibm-video__outer_container { max-width: 100%; }
+ibm-video__outer_container--no-max-width { width: 100%; }
+ibm-video__inner_container { position: relative; }
+ibm-video__iframe { position: absolute; top: 0; left: 0; }
