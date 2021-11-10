@@ -8,6 +8,7 @@ use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\field\FieldConfigInterface;
+use Drupal\ibm_video_media_type\Helper\ValidationHelpers;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceFieldConstraintsInterface;
@@ -17,12 +18,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Defines the media type plugin for embedded IBM videos or streams.
  *
- * @todo Replace source field with data containing only channel ID and channel
- * video ID. Ensure source field data is validated when pulled as metadata, and
- * with a validation constraint. Consider extracting the code
- * extracting/validating the metadata and using the extracted methods to perform
- * these operations when the field has already been obtained. The extracted
- * methods may be static or instance methods on this plugin class.
  * @todo Define a widget for this media source, which uses an embed URL to
  * extract the channel ID and channel video ID. Ensure validation is correctly
  * performed.
@@ -37,13 +32,33 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInterface, ContainerFactoryPluginInterface {
 
-  // @todo , width, and
-  // aspect ratio (and the width can be NULL).
-  // ID; move other settings to field formatter settings.
-  // @todo Finish field formatter form widget.
-  // @todo Finish video source field widget.
-  // @todo Finish default bundle for IBM video.
-  // @todo Check over and see if anything else needed.
+  /**
+   * Channel ID video data property name.
+   *
+   * @var string
+   */
+  public const VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME = 'channelId';
+
+  /**
+   * Channel video ID video data property name.
+   *
+   * @var string
+   */
+  public const VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME = 'channelVideoId';
+
+  /**
+   * Flag for a "JSON malformed" video data parse error.
+   *
+   * @var int
+   */
+  public const VIDEO_DATA_PARSE_ERROR_BAD_JSON = 1;
+
+  /**
+   * Flag for an "invalid key set" video data parse error.
+   *
+   * @var int
+   */
+  public const VIDEO_DATA_PARSE_ERROR_INVALID_KEYS = 2;
 
   /**
    * {@inheritdoc}
@@ -57,7 +72,25 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   }
 
   /**
-   * {@inheritdoc}
+   * Gets a piece of metadata associated with the given media entity.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   Media entity.
+   * @param string $name
+   *   Name of metadata field to fetch. Can be either
+   *   static::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME (for the channel ID) or
+   *   static::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME (for the channel video
+   *   ID).
+   *
+   * @return mixed
+   *   If $name is a valid metadata property name, returns the metadata property
+   *   value. If $name is invalid, returns NULL. If the source field value for
+   *   $media is empty, or the first element of the source field is NULL or an
+   *   empty string, returns NULL. If the source field for $media is otherwise
+   *   invalid, the return value is undefined.
+   *
+   * @throws \InvalidArgumentException
+   *   Thrown if $name is not a string.
    */
   public function getMetadata(MediaInterface $media, $name) {
     if (!is_string($name)) {
@@ -65,81 +98,21 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     }
     /** @var string $name */
 
-    // The video configuration (URL, autoplay flag, etc.) is stored in the
+    // The video metadata (channel ID and channel video ID) is stored in the
     // source field as a JSON-encoded string. Grab and decode this JSON, and try
-    // to return the value corresponding to $name. Return NULL if 1) $name does
-    // not correspond to an existing metadata property, or 2) $name is not one
-    // of the possible valid metadata properties.
+    // to return the value corresponding to $name.
 
-    $videoConfigurationJson = (string) $this->getSourceFieldValue($media);
-    if ($videoConfigurationJson === '') {
+    $videoDataJson = (string) $this->getSourceFieldValue($media);
+    if ($videoDataJson === '') {
       return NULL;
     }
 
-    $videoConfiguration = json_decode($videoConfigurationJson, TRUE);
-    if (!is_array($videoConfiguration)) {
-      static::throwSourceFieldInvalidException('media');
-    }
-
-    if (!array_key_exists($name, $videoConfiguration)) {
+    $videoData = json_decode($videoDataJson, TRUE);
+    if (!is_array($videoData)) {
       return NULL;
     }
 
-    // Check to ensure $name is valid.
-    switch ($name) {
-      case 'videoId':
-        if (!is_string($videoConfiguration['videoId'])) {
-          static::throwSourceFieldInvalidException('media');
-        }
-        break;
-
-      case 'useAutoplay':
-        if (!is_bool($videoConfiguration['useAutoplay'])) {
-          static::throwSourceFieldInvalidException('media');
-        }
-        break;
-
-      case 'useHtml5Ui':
-        if (!is_bool($videoConfiguration['useHtml5Ui'])) {
-          static::throwSourceFieldInvalidException('media');
-        }
-        break;
-
-      case 'displayControls':
-        if (!is_bool($videoConfiguration['displayControls'])) {
-          static::throwSourceFieldInvalidException('media');
-        }
-        break;
-
-      case 'initialVolume':
-        if (!is_int($videoConfiguration['initialVolume'])) {
-          static::throwSourceFieldInvalidException('media');
-        }
-        break;
-
-      case 'showTitle':
-        if (!is_bool($videoConfiguration['showTitle'])) {
-          static::throwSourceFieldInvalidException('media');
-        }
-        break;
-
-      case 'wMode':
-        if (!is_string($videoConfiguration['wMode'])) {
-          static::throwSourceFieldInvalidException('media');
-        }
-        break;
-
-      case 'defaultQuality':
-        if (!is_string($videoConfiguration['defaultQuality'])) {
-          static::throwSourceFieldInvalidException('media');
-        }
-        break;
-
-      default:
-        return NULL;
-    }
-
-    return $videoConfiguration[$name];
+    return $videoData[$name];
   }
 
   /**
@@ -147,14 +120,8 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    */
   public function getMetadataAttributes() : array {
     return [
-      'videoId' => $this->t('The IBM video ID'),
-      'useAutoplay' => $this->t('Whether to start playback immediately after iFrame loads (HTML autoplay not supported on iOS)'),
-      'useHtml5Ui' => $this->t('Whether to use the new HTML5 player UI'),
-      'displayControls' => $this->t('Whether to display the video playback controls'),
-      'initialVolume' => $this->t('Initial video volume in %'),
-      'showTitle' => $this->t('Whether to show the channel or video title on the bottom left'),
-      'wMode' => $this->t('Flash wmode parameter -- not applicable for HTML5 player. Should be either "direct", "opaque", "transparent", or "window".'),
-      'defaultQuality' => $this->t('Default stream playback quality -- should be either "low", "med", or "high"'),
+      'channelId' => $this->t('The IBM Video channel ID'),
+      'channelVideoId' => $this->t('The video ID within a given channel'),
     ];
   }
 
@@ -168,6 +135,105 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   }
 
   /**
+   * Parses data from the source field into an array.
+   *
+   * @param string $data
+   *   Data from the first item of the source field.
+   * @param array<string, mixed> $parsedData
+   *   (output parameter) If parsing was successful, this is an array consisting
+   *   of two items: one with key static::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME
+   *   containing the channel ID (the channel ID is not validated, though), and
+   *   another with key static::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME containing
+   *   the channel video ID (which is also not validated).
+   *
+   * @return int
+   *   Returns 0 on success. Otherwise, returns either
+   *   static::VIDEO_DATA_PARSE_ERROR_BAD_JSON (for malformed JSON), or
+   *   static::VIDEO_DATA_PARSE_ERROR_INVALID_KEYS (for an incorrect set of JSON
+   *   keys in the root JSON element).
+   */
+  public function tryParseVideoData(string $data, array &$parsedData) : int {
+    $parsedData = json_decode($data, TRUE);
+    if (is_array($parsedData)) {
+      if (count($parsedData) !== 2) {
+        $parsedData = [];
+        return static::VIDEO_DATA_PARSE_ERROR_INVALID_KEYS;
+      }
+      if (!array_key_exists(static::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME, $parsedData) || !array_key_exists(static::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME, $parsedData)) {
+        $parsedData = [];
+        return static::VIDEO_DATA_PARSE_ERROR_INVALID_KEYS;
+      }
+    }
+    else {
+      $parsedData = [];
+      return static::VIDEO_DATA_PARSE_ERROR_BAD_JSON;
+    }
+
+    return 0;
+  }
+
+  /**
+   * Validates and retrieves, from the parsed video data, the channel ID.
+   *
+   * @param array $parsedVideoData
+   *   Parsed video data (from tryParseVideoData()).
+   * @param string $channelId
+   *   (output parameter) If validation was successful, the channel ID.
+   *
+   * @return bool
+   *   Returns TRUE if the channel ID was valid; else returns FALSE.
+   */
+  public function tryGetChannelId(array $parsedVideoData, string &$channelId) : bool {
+    $channelId = $parsedVideoData[static::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME];
+    if (!is_string($channelId)) {
+      $channelId = '';
+      return FALSE;
+    }
+    return ValidationHelpers::isChannelIdValid($channelId);
+  }
+
+  /**
+   * Validates and retrieves, from the parsed video data, the channel video ID.
+   *
+   * @param array $parsedVideoData
+   *   Parsed video data (from tryParseVideoData()).
+   * @param string $channelVideoId
+   *   (output parameter) If validation was successful, the channel video ID.
+   *
+   * @return bool
+   *   Returns TRUE if the channel video ID was valid; else returns FALSE.
+   */
+  public function tryGetChannelVideoId(array $parsedVideoData, string &$channelVideoId) : bool {
+    $channelVideoId = $parsedVideoData[static::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME];
+    if (!is_string($channelVideoId)) {
+      $channelVideoId = '';
+      return FALSE;
+    }
+
+    return ValidationHelpers::isChannelVideoIdValid($channelVideoId);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getSourceFieldValue(MediaInterface $media) : ?string {
+    // See code in parent method.
+
+    $sourceField = $this->configuration['source_field'];
+    if (empty($sourceField)) {
+      throw new \RuntimeException('Source field for IBM video media source is not defined.');
+    }
+
+    $items = $media->get($sourceField);
+    if ($items->isEmpty()) {
+      return NULL;
+    }
+
+    $value = $items->first()->value;
+    return $value === NULL ? NULL : (string) $value;
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function prepareFormDisplay(MediaTypeInterface $type, EntityFormDisplayInterface $display) : void {
@@ -178,9 +244,9 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     // Taken partially from source for
     // @see \Drupal\media\Plugin\media\Source\OEmbed.
     $sourceFieldName = $this->getSourceFieldDefinition($type)->getName();
-    $display->setComponent($sourceFieldName, [
     // Make sure the source field for the media type has the correct form
     // widget.
+    $display->setComponent($sourceFieldName, [
       'type' => 'ibm_video_input',
       'weight' => $display->getComponent($sourceFieldName)['weight'],
     ]);
