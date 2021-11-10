@@ -164,6 +164,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
 
     // Taken partially from source for
     // @see \Drupal\media\Plugin\media\Source\OEmbed.
+
     $sourceFieldName = $this->getSourceFieldDefinition($type)->getName();
     // Make sure the source field for the media type has the correct form
     // widget.
@@ -171,6 +172,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       'type' => 'ibm_video_input',
       'weight' => $display->getComponent($sourceFieldName)['weight'],
     ]);
+
     $display->removeComponent('name');
   }
 

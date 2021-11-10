@@ -15,6 +15,8 @@ use Ranine\Iteration\ExtendableIterable;
 /**
  * Formats the IBM video media type source field.
  *
+ * @todo Fix up viewElements().
+ * @todo See if isApplicable() should be implemented, and implement if so.
  * @todo Create config schema for settings.
  * @todo Override settingsForm() and settingsSummary(). Add validation for
  * settings, and ensure validation is also performed before settings are used.
