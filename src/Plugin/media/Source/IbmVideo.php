@@ -30,7 +30,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   default_thumbnail_filename = "no-thumbnail.png",
  * )
  */
-class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInterface, ContainerFactoryPluginInterface {
+class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInterface {
 
   /**
    * Channel ID video data property name.
@@ -268,15 +268,6 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     }
 
     return 0;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) : IbmVideo {
-    // We call parent::create() instead of invoking our own constructor, because
-    // Drupal plugin constructors are technically not part of the public API.
-    return parent::create($container, $configuration, $plugin_id, $plugin_definition);
   }
 
 }

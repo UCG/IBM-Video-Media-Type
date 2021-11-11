@@ -8,6 +8,7 @@ use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
+use Drupal\ibm_video_media_type\Helper\UrlHelpers;
 use Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo;
 use Drupal\media\MediaInterface;
 use Ranine\Iteration\ExtendableIterable;
@@ -113,7 +114,8 @@ class IbmVideoFormatter extends FormatterBase {
           return (string) $value;
         }
       })->toArray());
-    return '//video.ibm.com/channel/' . $channelId . '/video/' . $channelVideoId . '?' . $queryString;
+    // Use a protocol-neutral protocol prefix ("//").
+    return UrlHelpers::assembleIbmVideoPermalinkUrl($channelId, $channelVideoId, '//');
   }
 
 }
