@@ -8,11 +8,10 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\WidgetBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\ibm_video_media_type\Helper\MediaSourceFieldHelpers;
 use Drupal\ibm_video_media_type\Helper\UrlHelpers;
 use Drupal\ibm_video_media_type\Helper\ValidationHelpers;
 use Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo;
-use Drupal\media\Entity\MediaType;
-use Drupal\media\MediaInterface;
 use Ranine\Helper\StringHelpers;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -50,27 +49,11 @@ class IbmVideoWidget extends WidgetBase {
    *
    * @throws \InvalidArgumentException
    *   Thrown if $delta is not an integer.
-   * @throws \InvalidArgumentException
-   *   Thrown if the entity for $items is not of type
-   *   \Drupal\media\MediaInterface.
-   * @throws \InvalidArgumentException
-   *   Thrown if the media entity for $items does not have a source of type
-   *   \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo.
    */
   public function formElement(FieldItemListInterface $items, $delta, array $element, array &$form, FormStateInterface $form_state) : array {
     if (!is_int($delta)) {
       throw new \InvalidArgumentException('$delta is not an integer.');
     }
-    $media = $items->getEntity();
-    if (!($media instanceof MediaInterface)) {
-      throw new \InvalidArgumentException('$items does not have an entity of type \\Drupal\\media\\MediaInterface.');
-    }
-    /** @var \Drupal\media\MediaInterface $media */
-    $source = $media->getSource();
-    if (!($source instanceof IbmVideo)) {
-      throw new \InvalidArgumentException('$items does not have a media source of type \\Drupal\\ibm_video_media_type\\Plugin\\media\\Source\\IbmVideo.');
-    }
-    /** @var \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo $source */
 
     $element['value'] = $element + [
       '#type' => 'textfield',
@@ -84,7 +67,7 @@ made of letters a-z and/or A-Z][optional query string preceeded by '?']". This
 URL may be "cleaned up" by us before it is used to embed the video.
 EOS
       ),
-      '#default_value' => static::getDefaultVideoUrl($source, $items, $delta),
+      '#default_value' => $this->getDefaultVideoUrl($items, $delta),
       '#size' => 50,
       '#placeholder' => 'https://video.ibm.com/channel/01234567/video/abcdef',
       '#maxlength' => 120,
@@ -127,6 +110,51 @@ EOS
     }
 
     return $values;
+  }
+
+  /**
+   * Gets the default video URL to associate with the given field item.
+   *
+   * @param \Drupal\Core\Field\FieldItemListInterface $items
+   *   Field item list.
+   * @param int $delta
+   *   Position of field item in list.
+   *
+   * @return string|null
+   *   Default video URL, or NULL if the field is not set to a valid value at
+   *   $delta.
+   */
+  private function getDefaultVideoUrl(FieldItemListInterface $items, int $delta) : ?string {
+    // Build an IBM video URL to use as the default value for the text field. If
+    // is nothing is set for the field item, or the item is incorrectly
+    // formatted, don't display anything for the default value.
+
+    if (!isset($items[$delta])) {
+      return NULL;
+    }
+    $item = $items[$delta];
+    if (!isset($item->value)) {
+      return NULL;
+    }
+    $value = (string) $item->value;
+    if ($value === '') {
+      return NULL;
+    }
+    $videoData = [];
+    if ($this->source->tryParseVideoData($value, $videoData) !== 0) {
+      return NULL;
+    }
+    $channelId = $videoData[IbmVideo::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME];
+    if (!is_string($channelId) || !ValidationHelpers::isChannelIdValid($channelId)) {
+      return NULL;
+    }
+    $channelVideoId = $videoData[IbmVideo::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME];
+    if (!is_string($channelVideoId) || !ValidationHelpers::isChannelIdValid($channelVideoId)) {
+      return NULL;
+    }
+    /** @var string $channelId */
+    /** @var string $channelVideoId */
+    return UrlHelpers::assembleIbmVideoPermalinkUrl($channelId, $channelVideoId, 'https://');
   }
 
   /**
@@ -178,59 +206,7 @@ EOS
    * {@inheritdoc}
    */
   public static function isApplicable(FieldDefinitionInterface $field_definition) : bool {
-    $bundle = $field_definition->getTargetBundle();
-    if (!is_string($bundle) || $field_definition->getTargetEntityTypeId() !== 'media') {
-      return FALSE;
-    }
-    /** @var \Drupal\media\MediaTypeInterface */
-    $mediaType = MediaType::load($bundle);
-    return ($mediaType->getSource() instanceof IbmVideo) ? TRUE : FALSE;
-  }
-
-  /**
-   * Gets the default video URL to associate with the given field item.
-   *
-   * @param \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo $source
-   *   IBM video media source associated with $items.
-   * @param \Drupal\Core\Field\FieldItemListInterface $items
-   *   Field item list.
-   * @param int $delta
-   *   Position of field item in list.
-   *
-   * @return string|null
-   *   Default video URL, or NULL if the field is not set to a valid value at
-   *   $delta.
-   */
-  private static function getDefaultVideoUrl(IbmVideo $source, FieldItemListInterface $items, int $delta) : ?string {
-    // Build an IBM video URL to use as the default value for the text field. If
-    // is nothing is set for the field item, or the item is incorrectly
-    // formatted, don't display anything for the default value.
-
-    if (!isset($items[$delta])) {
-      return NULL;
-    }
-    $item = $items[$delta];
-    if (!isset($item->value)) {
-      return NULL;
-    }
-    $value = (string) $item->value;
-    if ($value === '') {
-      return NULL;
-    }
-    if ($source->tryParseVideoData($value, $videoData) !== 0) {
-      return NULL;
-    }
-    $channelId = $videoData[IbmVideo::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME];
-    if (!is_string($channelId) || !ValidationHelpers::isChannelIdValid($channelId)) {
-      return NULL;
-    }
-    $channelVideoId = $videoData[IbmVideo::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME];
-    if (!is_string($channelVideoId) || !ValidationHelpers::isChannelIdValid($channelVideoId)) {
-      return NULL;
-    }
-    /** @var string $channelId */
-    /** @var string $channelVideoId */
-    return UrlHelpers::assembleIbmVideoPermalinkUrl($channelId, $channelVideoId, 'https://');
+    return MediaSourceFieldHelpers::doesFieldDefinitionHaveIbmVideoMediaSource($field_definition);
   }
 
 }
