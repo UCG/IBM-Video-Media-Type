@@ -9,6 +9,7 @@ use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\ibm_video_media_type\Helper\MediaSourceFieldHelpers;
 use Drupal\ibm_video_media_type\Helper\UrlHelpers;
 use Drupal\ibm_video_media_type\Helper\ValidationHelpers;
@@ -19,9 +20,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Formats the IBM video media type source field.
  *
- * @todo Override settingsForm() and settingsSummary(). Add validation for
- * settings, and ensure validation is also performed before settings are used.
- *
  * @FieldFormatter(
  *   id = "ibm_video",
  *   label = @Translation("IBM video"),
@@ -29,6 +27,21 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * )
  */
 class IbmVideoFormatter extends FormatterBase {
+
+  /**
+   * Settings for the video player assigned to default values.
+   *
+   * @var array
+   */
+  private const PLAYER_SETTINGS_AND_DEFAULTS = [
+    'useAutoplay' => FALSE,
+    'useHtml5Ui' => TRUE,
+    'displayControls' => TRUE,
+    'initialVolume' => 50,
+    'showTitle' => TRUE,
+    'wMode' => NULL,
+    'defaultQuality' => NULL,
+  ];
 
   /**
    * Code for the low default quality setting.
@@ -85,29 +98,91 @@ class IbmVideoFormatter extends FormatterBase {
   private IbmVideo $source;
 
   /**
-   * Settings for the video player assigned to default values.
-   *
-   * @var array
-   */
-  private const PLAYER_SETTINGS_AND_DEFAULTS = [
-    'useAutoplay' => FALSE,
-    'useHtml5Ui' => TRUE,
-    'displayControls' => TRUE,
-    'initialVolume' => 50,
-    'showTitle' => TRUE,
-    'wMode' => NULL,
-    'defaultQuality' => NULL,
-  ];
-
-  /**
    * {@inheritdoc}
    */
-  public static function defaultSettings() : array {
-    return static::PLAYER_SETTINGS_AND_DEFAULTS + parent::defaultSettings();
+  public function settingsForm(array $form, FormStateInterface $form_state) : array {
+    // Cast the settings for which we are allowing the user to specify NULL in
+    // the UI to appropriate values, after checking for NULLs.
+    $defaultInitialVolume = $this->getSetting('initialVolume');
+    if ($defaultInitialVolume !== NULL) {
+      $defaultInitialVolume = (int) $defaultInitialVolume;
+    }
+    $defaultWMode = $this->getSetting('wMode');
+    if ($defaultWMode !== NULL) {
+      $defaultWMode = (int) $defaultWMode;
+    }
+    $defaultDefaultQuality = $this->getSetting('defaultQuality');
+    if ($defaultDefaultQuality !== NULL) {
+      $defaultDefaultQuality = (int) $defaultDefaultQuality;
+    }
+    return [
+      'useAutoplay' => [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Use Autoplay'),
+        '#default_value' => (bool) $this->getSetting('useAutoplay'),
+      ],
+      'useHtml5Ui' => [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Use HTML5 UI'),
+        '#default_value' => (bool) $this->getSetting('useHtml5Ui'),
+      ],
+      'displayControls' => [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Display Playback Controls'),
+        '#default_value' => (bool) $this->getSetting('displayControls'),
+      ],
+      'showTitle' => [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Show Video Title'),
+        '#default_value' => (bool) $this->getSetting('showTitle'),
+      ],
+      'initialVolume' => [
+        '#type' => 'range',
+        '#title' => $this->t('Initial Volume'),
+        '#default_value' => $defaultInitialVolume,
+        '#min' => 1,
+        '#max' => 100,
+        '#step' => 1,
+      ],
+      'wMode' => [
+        '#type' => 'list',
+        '#title' => $this->t('WMode'),
+        '#default_value' => (int) $defaultWMode,
+        '#options' => [
+          static::SETTING_WMODE_DIRECT => 'Direct',
+          static::SETTING_WMODE_OPAQUE => 'Opaque',
+          static::SETTING_WMODE_TRANSPARENT => 'Transparent',
+          static::SETTING_WMODE_WINDOW => 'Window',
+        ],
+      ],
+      'defaultQuality' => [
+        '#type' => 'list',
+        '#title' => $this->t('Default Quality'),
+        '#default_value' => (int) $defaultDefaultQuality,
+        '#options' => [
+          static::SETTING_DEFAULT_QUALITY_LOW => 'Low',
+          static::SETTING_DEFAULT_QUALITY_MEDIUM => 'Medium',
+          static::SETTING_DEFAULT_QUALITY_HIGH => 'High',
+        ],
+      ],
+    ];
   }
 
   /**
-   * {@inheritdoc}
+   * Returns the render array, keyed by delta, for the given field items.
+   *
+   * NULL, empty, and invalid field items are skipped. Each field item is
+   * parsed as a JSON string of video metadata, in accordance with what is
+   * defined in @see \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo.
+   *
+   * @param \Drupal\Core\Field\FieldItemListInterface $items
+   *   Field items.
+   * @param string $langcode
+   *   Language that should be used to render the field.
+   *
+   * @throws \RuntimeException
+   *   Thrown if an invalid formatter setting is encountered when trying to
+   *   build a video embed URL.
    */
   public function viewElements(FieldItemListInterface $items, $langcode) : array {
     $entity = $items->getEntity();
@@ -163,25 +238,24 @@ next_item:
    *
    * @return string
    *   Embed URL. This URL is protocol-independent (starts with "//").
+   *
+   * @throws \RuntimeException
+   *   Thrown if an invalid formatter setting is encountered when trying to
+   *   build the URL.
    */
   private function generateVideoUrl(string $channelId, string $channelVideoId) : string {
     $queryString = UrlHelper::buildQuery(ExtendableIterable::from(static::PLAYER_SETTINGS_AND_DEFAULTS)
       ->map(fn($setting) => $this->getSetting($setting))
       ->filter(fn($setting, $value) => $value !== NULL)
       ->map(function ($setting, $value) : string {
-        // Cast directly to a string for the purposes of generating the query
-        // string, except in some cases: 1) we convert boolean TRUE to 'true'
-        // and FALSE to 'false', 2) except for "useHtml5Ui", in which case we
-        // convert TRUE to '1' and FALSE to '0', and 3) for "wMode" and
-        // "defaultQuality" we map their integral values to corresponding string
-        // values manually. See
+        // Validate and cast the setting value to an appropriate form. See
         // https://support.video.ibm.com/hc/en-us/articles/207851927-Using-URL-Parameters-and-Embed-API-for-Custom-Players.
         switch ($setting) {
           case 'useHtml5Ui':
             return $value ? '1' : '0';
 
           case 'wMode':
-            switch ($value) {
+            switch ((int) $value) {
               case static::SETTING_WMODE_DIRECT:
                 return 'direct';
 
@@ -199,7 +273,7 @@ next_item:
             }
 
           case 'defaultQuality':
-            switch ($value) {
+            switch ((int) $value) {
               case static::SETTING_DEFAULT_QUALITY_LOW:
                 return 'low';
 
@@ -213,13 +287,15 @@ next_item:
                 throw new \RuntimeException('Unexpected defaultQuality setting encountered.');
             }
 
+          case 'initialVolume':
+            $initialVolume = (int) $value;
+            if (!static::isInitialVolumeInRange($initialVolume)) {
+              throw new \RuntimeException('Unexpected initialVolume setting encountered.');
+            }
+            return (string) $initialVolume;
+
           default:
-            if (is_bool($value)) {
-              return $value ? 'true' : 'false';
-            }
-            else {
-              return (string) $value;
-            }
+            return $value ? 'true' : 'false';
         }
       })->toArray());
     // Use a protocol-neutral protocol prefix ("//").
@@ -276,8 +352,25 @@ next_item:
   /**
    * {@inheritdoc}
    */
+  public static function defaultSettings() : array {
+    return static::PLAYER_SETTINGS_AND_DEFAULTS + parent::defaultSettings();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public static function isApplicable(FieldDefinitionInterface $field_definition) : bool {
     return MediaSourceFieldHelpers::doesFieldDefinitionHaveIbmVideoMediaSource($field_definition);
+  }
+
+  /**
+   * Tells whether given initial volume value is valid (btwn 0-100, inclusive).
+   *
+   * @param int $initialVolume
+   *   Initial volume value to check.
+   */
+  private static function isInitialVolumeInRange(int $initialVolume) : bool {
+    return ($initialVolume >= 0 && $initialVolume <= 100) ? TRUE : FALSE;
   }
 
 }
