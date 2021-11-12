@@ -6,14 +6,13 @@ namespace Drupal\ibm_video_media_type\Plugin\media\Source;
 
 use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
-use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\field\FieldConfigInterface;
 use Drupal\ibm_video_media_type\Helper\ValidationHelpers;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceFieldConstraintsInterface;
 use Drupal\media\MediaTypeInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Ranine\Helper\ThrowHelpers;
 
 /**
  * Defines the media type plugin for embedded IBM videos or streams.
@@ -174,6 +173,30 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     ]);
 
     $display->removeComponent('name');
+  }
+
+  /**
+   * Assembles the given parameters for use in the source field value.
+   *
+   * @param string $channelId
+   *   Channel ID.
+   * @param string $channelVideoId
+   *   Channel video ID.
+   *
+   * @return string
+   *   Source field value generated from the function arguments.
+   *
+   * @throws \InvalidArgumentException
+   *   Thrown if $channelId or $channelVideoId is empty.
+   */
+  public function prepareVideoData(string $channelId, string $channelVideoId) : string {
+    ThrowHelpers::throwIfEmptyString($channelId, 'channelId');
+    ThrowHelpers::throwIfEmptyString($channelVideoId, 'channelVideoId');
+
+    return json_encode([
+      static::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME => $channelId,
+      static::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME => $channelVideoId,
+    ]);
   }
 
   /**
