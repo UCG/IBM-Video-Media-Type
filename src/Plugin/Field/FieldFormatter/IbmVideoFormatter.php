@@ -11,15 +11,14 @@ use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\ibm_video_media_type\Helper\MediaSourceFieldHelpers;
 use Drupal\ibm_video_media_type\Helper\UrlHelpers;
+use Drupal\ibm_video_media_type\Helper\ValidationHelpers;
 use Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo;
-use Drupal\media\MediaInterface;
 use Ranine\Iteration\ExtendableIterable;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Formats the IBM video media type source field.
  *
- * @todo Fix up viewElements().
  * @todo Create config schema for settings.
  * @todo Override settingsForm() and settingsSummary(). Add validation for
  * settings, and ensure validation is also performed before settings are used.
@@ -33,7 +32,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class IbmVideoFormatter extends FormatterBase {
 
   /**
-   * Video source associated with this widget.
+   * Video source associated with this formatter.
    */
   private IbmVideo $source;
 
@@ -63,21 +62,42 @@ class IbmVideoFormatter extends FormatterBase {
    * {@inheritdoc}
    */
   public function viewElements(FieldItemListInterface $items, $langcode) : array {
-    // Get the media source and media entity associated with $items.
-    $media = $items->getEntity();
-    if (!($media instanceof MediaInterface)) {
-      throw new \InvalidArgumentException('$items contains a field whose entity is not a media entity.');
-    }
-
-    $videoEmbedUrl = $this->generateVideoUrl($this->source->getMetadata($media, 'channelId'), $this->source->getMetadata($media, 'channelVideoId'));
+    $entity = $items->getEntity();
     $renderElement = [];
     foreach ($items as $delta => $item) {
+      // Skip empty items.
+      if ($item === NULL || ($value = (string) $item->value) === '') {
+        $renderElement[$delta] = [];
+        goto next_item;
+      }
+
+      // Try to extract channel ID and channel video ID from field value. Skip
+      // invalid field items.
+      $videoData = [];
+      if ($this->source->tryParseVideoData($value, $videoData) !== 0) {
+        $renderElement[$delta] = [];
+        goto next_item;
+      }
+      $channelId = $videoData['channelId'];
+      if (!ValidationHelpers::isChannelIdValid($channelId)) {
+        $renderElement[$delta] = [];
+        goto next_item;
+      }
+      $channelVideoId = $videoData['channelVideoId'];
+      if (!ValidationHelpers::isChannelVideoIdValid($channelVideoId)) {
+        $renderElement[$delta] = [];
+        goto next_item;
+      }
+
+      // Render the item with a template defined by this module.
       $renderElement[$delta] = [
         '#theme' => 'ibm_video_media_type_player',
-        '#videoUrl' => $videoEmbedUrl,
+        '#videoUrl' => $this->generateVideoUrl($channelId, $channelVideoId),
       ];
+
+next_item:
       // Add the cache metadata associated with the parent media entity.
-      CacheableMetadata::createFromObject($media)->applyTo($renderElement[$delta]);
+      CacheableMetadata::createFromObject($entity)->applyTo($renderElement[$delta]);
     }
 
     return $renderElement;
@@ -116,7 +136,9 @@ class IbmVideoFormatter extends FormatterBase {
         }
       })->toArray());
     // Use a protocol-neutral protocol prefix ("//").
-    return UrlHelpers::assembleIbmVideoPermalinkUrl($channelId, $channelVideoId, '//');
+    $baseUrl = UrlHelpers::assembleIbmVideoPermalinkUrl($channelId, $channelVideoId, '//');
+
+    return $queryString === '' ? $baseUrl : ($baseUrl . '?' . $queryString);
   }
 
   /**
