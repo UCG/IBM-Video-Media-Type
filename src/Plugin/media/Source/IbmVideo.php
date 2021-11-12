@@ -17,10 +17,6 @@ use Ranine\Helper\ThrowHelpers;
 /**
  * Defines the media type plugin for embedded IBM videos or streams.
  *
- * @todo Define a widget for this media source, which uses an embed URL to
- * extract the channel ID and channel video ID. Ensure validation is correctly
- * performed.
- *
  * @MediaType(
  *   id = "ibm_video",
  *   label = @Translation("IBM Video"),
