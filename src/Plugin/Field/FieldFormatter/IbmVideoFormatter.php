@@ -19,7 +19,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Formats the IBM video media type source field.
  *
- * @todo Create config schema for settings.
  * @todo Override settingsForm() and settingsSummary(). Add validation for
  * settings, and ensure validation is also performed before settings are used.
  *
@@ -30,6 +29,55 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * )
  */
 class IbmVideoFormatter extends FormatterBase {
+
+  /**
+   * Code for the low default quality setting.
+   *
+   * @var int
+   */
+  private const SETTING_DEFAULT_QUALITY_LOW = 1;
+
+  /**
+   * Code for the medium default quality setting.
+   *
+   * @var int
+   */
+  private const SETTING_DEFAULT_QUALITY_MEDIUM = 2;
+
+  /**
+   * Code for the high default quality setting.
+   *
+   * @var int
+   */
+  private const SETTING_DEFAULT_QUALITY_HIGH = 3;
+
+  /**
+   * Code for the "direct" video WMode setting.
+   *
+   * @var int
+   */
+  private const SETTING_WMODE_DIRECT = 1;
+
+  /**
+   * Code for the "opaque" video WMode setting.
+   *
+   * @var int
+   */
+  private const SETTING_WMODE_OPAQUE = 2;
+
+  /**
+   * Code for the "transparent" video WMode setting.
+   *
+   * @var int
+   */
+  private const SETTING_WMODE_TRANSPARENT = 3;
+
+  /**
+   * Code for the "window" video WMode setting.
+   *
+   * @var int
+   */
+  private const SETTING_WMODE_WINDOW = 4;
 
   /**
    * Video source associated with this formatter.
@@ -121,18 +169,57 @@ next_item:
       ->map(fn($setting) => $this->getSetting($setting))
       ->filter(fn($setting, $value) => $value !== NULL)
       ->map(function ($setting, $value) : string {
-        // Cast most types directly to strings for the purposes of generating
-        // the query string; however, convert boolean TRUE to 'true' and FALSE
-        // to 'false', except for "useHtml5Ui", in which case we convert TRUE to
-        // '1' and FALSE to '0'. See https://support.video.ibm.com/hc/en-us/articles/207851927-Using-URL-Parameters-and-Embed-API-for-Custom-Players.
-        if ($setting === 'useHtml5Ui') {
-          return $value ? '1': '0';
-        }
-        elseif (is_bool($value)) {
-          return $value ? 'true' : 'false';
-        }
-        else {
-          return (string) $value;
+        // Cast directly to a string for the purposes of generating the query
+        // string, except in some cases: 1) we convert boolean TRUE to 'true'
+        // and FALSE to 'false', 2) except for "useHtml5Ui", in which case we
+        // convert TRUE to '1' and FALSE to '0', and 3) for "wMode" and
+        // "defaultQuality" we map their integral values to corresponding string
+        // values manually. See
+        // https://support.video.ibm.com/hc/en-us/articles/207851927-Using-URL-Parameters-and-Embed-API-for-Custom-Players.
+        switch ($setting) {
+          case 'useHtml5Ui':
+            return $value ? '1' : '0';
+
+          case 'wMode':
+            switch ($value) {
+              case static::SETTING_WMODE_DIRECT:
+                return 'direct';
+
+              case static::SETTING_WMODE_OPAQUE:
+                return 'opaque';
+
+              case static::SETTING_WMODE_TRANSPARENT:
+                return 'transparent';
+
+              case static::SETTING_WMODE_WINDOW:
+                return 'window';
+
+              default:
+                throw new \RuntimeException('Unexpected wMode setting encountered.');
+            }
+
+          case 'defaultQuality':
+            switch ($value) {
+              case static::SETTING_DEFAULT_QUALITY_LOW:
+                return 'low';
+
+              case static::SETTING_DEFAULT_QUALITY_MEDIUM:
+                return 'medium';
+
+              case static::SETTING_DEFAULT_QUALITY_HIGH:
+                return 'high';
+
+              default:
+                throw new \RuntimeException('Unexpected defaultQuality setting encountered.');
+            }
+
+          default:
+            if (is_bool($value)) {
+              return $value ? 'true' : 'false';
+            }
+            else {
+              return (string) $value;
+            }
         }
       })->toArray());
     // Use a protocol-neutral protocol prefix ("//").

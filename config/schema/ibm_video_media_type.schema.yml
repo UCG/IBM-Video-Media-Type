@@ -1,0 +1,25 @@
+field.formatter.settings.ibm_video:
+  type: mapping
+  label: IBM Video Player Configuration
+  mapping:
+    useAutoplay:
+      type: bool
+      label: Autoplay
+    useHtml5Ui:
+      type: bool
+      label: HTML5 UI
+    displayControls:
+      type: bool
+      label: Display Controls
+    initialVolume:
+      type: int
+      label: Initial Volume
+    showTitle:
+      type: bool
+      label: Show Title
+    wMode:
+      type: int
+      label: WMode
+    defaultQuality:
+      type: int
+      label: Default Quality
