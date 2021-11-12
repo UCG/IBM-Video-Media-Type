@@ -4,18 +4,28 @@ declare (strict_types = 1);
 
 namespace Drupal\ibm_video_media_type\Plugin\FieldWidget;
 
+use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\WidgetBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\ibm_video_media_type\Helper\UrlHelpers;
 use Drupal\ibm_video_media_type\Helper\ValidationHelpers;
 use Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo;
+use Drupal\media\Entity\MediaType;
 use Drupal\media\MediaInterface;
 use Ranine\Helper\StringHelpers;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Widget for IBM video source field.
+ *
+ * @FieldWidget(
+ *   id = "ibm_video_input",
+ *   label = @Translation("IBM Video Input"),
+ *   field_types = {
+ *     "string_long",
+ *   },
+ * )
  */
 class IbmVideoWidget extends WidgetBase {
 
@@ -87,7 +97,7 @@ EOS
   /**
    * {@inheritdoc}
    */
-  public function massageFormValues(array $values, array $form, FormStateInterface $form_state) {
+  public function massageFormValues(array $values, array $form, FormStateInterface $form_state) : array {
     foreach ($values as $delta => &$itemValues) {
       /** @var int $delta */
       assert(is_array($itemValues) && isset($itemValues['value']));
@@ -109,9 +119,14 @@ EOS
         assert(count($parts) === 2);
         $channelVideoId = $parts[0];
         assert(StringHelpers::isNonEmptyString($channelVideoId) && ValidationHelpers::isChannelVideoIdValid($channelVideoId));
-        
+
+        // Set the field value to the JSON appropriate for the channel and video
+        // IDs.
+        $itemValues['value'] = $this->source->prepareVideoData($channelId, $channelVideoId);
       }
     }
+
+    return $values;
   }
 
   /**
@@ -157,6 +172,19 @@ EOS
     $widget->source = $source;
 
     return $widget;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function isApplicable(FieldDefinitionInterface $field_definition) : bool {
+    $bundle = $field_definition->getTargetBundle();
+    if (!is_string($bundle) || $field_definition->getTargetEntityTypeId() !== 'media') {
+      return FALSE;
+    }
+    /** @var \Drupal\media\MediaTypeInterface */
+    $mediaType = MediaType::load($bundle);
+    return ($mediaType->getSource() instanceof IbmVideo) ? TRUE : FALSE;
   }
 
   /**
