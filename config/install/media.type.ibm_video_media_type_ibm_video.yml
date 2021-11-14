@@ -3,6 +3,8 @@ status: true
 dependencies:
   module:
     - ibm_video_media_type
+  config:
+    - field.storage.media.field_ibm_video_media_type_video_data
 id: ibm_video_media_type_ibm_video
 label: IBM Video
 description: A video hosted or streamed by/with IBM Video.

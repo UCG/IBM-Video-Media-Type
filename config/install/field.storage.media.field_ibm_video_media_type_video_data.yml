@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - media
+id: media.field_ibm_video_media_type_video_data
+field_name: field_ibm_video_media_type_video_data
+entity_type: media
+type: string
+settings:
+  max_length: 255
+  is_ascii: true
+  case_sensitive: true
+module: ibm_video_media_type
+locked: false
+cardinality: 1
+translatable: false
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false
