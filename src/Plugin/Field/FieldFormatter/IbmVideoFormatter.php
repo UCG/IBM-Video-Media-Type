@@ -2,7 +2,7 @@
 
 declare (strict_types = 1);
 
-namespace Drupal\ibm_video_media_type\Plugin\FieldFormatter;
+namespace Drupal\ibm_video_media_type\Plugin\Field\FieldFormatter;
 
 use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Cache\CacheableMetadata;
@@ -29,7 +29,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class IbmVideoFormatter extends FormatterBase {
 
   /**
-   * Settings for the video player assigned to default values.
+   * Settings for the video player, each assigned to its default value.
    *
    * @var array
    */
@@ -101,45 +101,31 @@ class IbmVideoFormatter extends FormatterBase {
    * {@inheritdoc}
    */
   public function settingsForm(array $form, FormStateInterface $form_state) : array {
-    // Cast the settings for which we are allowing the user to specify NULL in
-    // the UI to appropriate values, after checking for NULLs.
-    $defaultInitialVolume = $this->getSetting('initialVolume');
-    if ($defaultInitialVolume !== NULL) {
-      $defaultInitialVolume = (int) $defaultInitialVolume;
-    }
-    $defaultWMode = $this->getSetting('wMode');
-    if ($defaultWMode !== NULL) {
-      $defaultWMode = (int) $defaultWMode;
-    }
-    $defaultDefaultQuality = $this->getSetting('defaultQuality');
-    if ($defaultDefaultQuality !== NULL) {
-      $defaultDefaultQuality = (int) $defaultDefaultQuality;
-    }
     return [
       'useAutoplay' => [
         '#type' => 'checkbox',
         '#title' => $this->t('Use Autoplay'),
-        '#default_value' => (bool) $this->getSetting('useAutoplay'),
+        '#default_value' => $this->prepareSetting('useAutoplay'),
       ],
       'useHtml5Ui' => [
         '#type' => 'checkbox',
         '#title' => $this->t('Use HTML5 UI'),
-        '#default_value' => (bool) $this->getSetting('useHtml5Ui'),
+        '#default_value' => $this->prepareSetting('useHtml5Ui'),
       ],
       'displayControls' => [
         '#type' => 'checkbox',
         '#title' => $this->t('Display Playback Controls'),
-        '#default_value' => (bool) $this->getSetting('displayControls'),
+        '#default_value' => $this->prepareSetting('displayControls'),
       ],
       'showTitle' => [
         '#type' => 'checkbox',
         '#title' => $this->t('Show Video Title'),
-        '#default_value' => (bool) $this->getSetting('showTitle'),
+        '#default_value' => $this->prepareSetting('showTitle'),
       ],
       'initialVolume' => [
         '#type' => 'range',
         '#title' => $this->t('Initial Volume'),
-        '#default_value' => $defaultInitialVolume,
+        '#default_value' => $this->prepareSetting('initialVolume'),
         '#min' => 1,
         '#max' => 100,
         '#step' => 1,
@@ -147,7 +133,7 @@ class IbmVideoFormatter extends FormatterBase {
       'wMode' => [
         '#type' => 'list',
         '#title' => $this->t('WMode'),
-        '#default_value' => (int) $defaultWMode,
+        '#default_value' => $this->prepareSetting('wMode'),
         '#options' => [
           static::SETTING_WMODE_DIRECT => 'Direct',
           static::SETTING_WMODE_OPAQUE => 'Opaque',
@@ -158,7 +144,7 @@ class IbmVideoFormatter extends FormatterBase {
       'defaultQuality' => [
         '#type' => 'list',
         '#title' => $this->t('Default Quality'),
-        '#default_value' => (int) $defaultDefaultQuality,
+        '#default_value' => $this->prepareSetting('defaultQuality'),
         '#options' => [
           static::SETTING_DEFAULT_QUALITY_LOW => 'Low',
           static::SETTING_DEFAULT_QUALITY_MEDIUM => 'Medium',
@@ -191,7 +177,7 @@ class IbmVideoFormatter extends FormatterBase {
       // Skip empty items.
       if ($item === NULL || ($value = (string) $item->value) === '') {
         $renderElement[$delta] = [];
-        goto next_item;
+        goto finish_element_item;
       }
 
       // Try to extract channel ID and channel video ID from field value. Skip
@@ -199,17 +185,17 @@ class IbmVideoFormatter extends FormatterBase {
       $videoData = [];
       if ($this->source->tryParseVideoData($value, $videoData) !== 0) {
         $renderElement[$delta] = [];
-        goto next_item;
+        goto finish_element_item;
       }
       $channelId = $videoData['channelId'];
       if (!ValidationHelpers::isChannelIdValid($channelId)) {
         $renderElement[$delta] = [];
-        goto next_item;
+        goto finish_element_item;
       }
       $channelVideoId = $videoData['channelVideoId'];
       if (!ValidationHelpers::isChannelVideoIdValid($channelVideoId)) {
         $renderElement[$delta] = [];
-        goto next_item;
+        goto finish_element_item;
       }
 
       // Render the item with a template defined by this module.
@@ -218,7 +204,7 @@ class IbmVideoFormatter extends FormatterBase {
         '#videoUrl' => $this->generateVideoUrl($channelId, $channelVideoId),
       ];
 
-next_item:
+finish_element_item:
       // Add the cache metadata associated with the parent media entity.
       CacheableMetadata::createFromObject($entity)->applyTo($renderElement[$delta]);
     }
@@ -245,9 +231,9 @@ next_item:
    */
   private function generateVideoUrl(string $channelId, string $channelVideoId) : string {
     $queryString = UrlHelper::buildQuery(ExtendableIterable::from(static::PLAYER_SETTINGS_AND_DEFAULTS)
-      ->map(fn($setting) => $this->getSetting($setting))
+      ->map(fn(string $setting) => $this->prepareSetting($setting))
       ->filter(fn($setting, $value) => $value !== NULL)
-      ->map(function ($setting, $value) : string {
+      ->map(function (string $setting, $value) : string {
         // Validate and cast the setting value to an appropriate form. See
         // https://support.video.ibm.com/hc/en-us/articles/207851927-Using-URL-Parameters-and-Embed-API-for-Custom-Players.
         switch ($setting) {
@@ -255,7 +241,7 @@ next_item:
             return $value ? '1' : '0';
 
           case 'wMode':
-            switch ((int) $value) {
+            switch ($value) {
               case static::SETTING_WMODE_DIRECT:
                 return 'direct';
 
@@ -273,7 +259,7 @@ next_item:
             }
 
           case 'defaultQuality':
-            switch ((int) $value) {
+            switch ($value) {
               case static::SETTING_DEFAULT_QUALITY_LOW:
                 return 'low';
 
@@ -288,14 +274,19 @@ next_item:
             }
 
           case 'initialVolume':
-            $initialVolume = (int) $value;
-            if (!static::isInitialVolumeInRange($initialVolume)) {
+            if (!static::isInitialVolumeInRange($value)) {
               throw new \RuntimeException('Unexpected initialVolume setting encountered.');
             }
-            return (string) $initialVolume;
+            return (string) $value;
+
+          case 'useAutoplay':
+          case 'useHtml5Ui':
+          case 'displayControls':
+          case 'showTitle':
+            return $value ? 'true' : 'false';
 
           default:
-            return $value ? 'true' : 'false';
+            throw new \RuntimeException('Unexpected setting encountered.');
         }
       })->toArray());
     // Use a protocol-neutral protocol prefix ("//").
@@ -305,10 +296,62 @@ next_item:
   }
 
   /**
-   * Creates and returns a new IBM video widget.
+   * Prepares a given setting for use.
+   *
+   * @param string $settingName
+   *   Setting name.
+   *
+   * @return mixed
+   *   Prepared setting. If the setting isn't set, or is considered
+   *   "non-nullable" but is set to NULL, the default value for the setting is
+   *   is returned. The returned setting is also casted to the primitive type
+   *   corresponding to the setting.
+   *
+   * @throws \InvalidArgumentException
+   *   Thrown if $settingName is not a valid setting name.
+   */
+  private function prepareSetting(string $settingName) {
+    $value = $this->getSetting($settingName);
+    if ($value === NULL) {
+      // If the setting isn't nullable, look up the default setting (if we can).
+      switch ($settingName) {
+        case 'wMode':
+        case 'defaultQuality':
+          // These are the nullable settings.
+          return NULL;
+
+        default:
+          if (!array_key_exists($settingName, static::PLAYER_SETTINGS_AND_DEFAULTS)) {
+            throw new \InvalidArgumentException('$settingName is not valid.');
+          }
+          return static::PLAYER_SETTINGS_AND_DEFAULTS[$settingName];
+      }
+    }
+    else {
+      // Cast the setting to an appropriate type.
+      switch ($settingName) {
+        case 'wMode':
+        case 'defaultQuality':
+        case 'initialVolume':
+          return (int) $value;
+
+        case 'useAutoplay':
+        case 'useHtml5Ui':
+        case 'displayControls':
+        case 'showTitle':
+          return (bool) $value;
+
+        default:
+          throw new \RuntimeException('Unexpected setting name.');
+      }
+    }
+  }
+
+  /**
+   * Creates and returns a new IBM video formatter.
    *
    * @param ContainerInterface $container
-   *   Service container
+   *   Service container.
    * @param array $configuration
    *   Configuration array containing information about the plugin instance.
    * @param string $plugin_id
@@ -326,18 +369,20 @@ next_item:
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) : IbmVideoFormatter {
     // We call parent::create() instead of invoking our own constructor, because
     // Drupal plugin constructors are technically not part of the public API.
-    /** @var \Drupal\ibm_video_media_type\Plugin\FieldFormatter\IbmVideoFormatter */
+    /** @var \Drupal\ibm_video_media_type\Plugin\Field\FieldFormatter\IbmVideoFormatter */
     $formatter = parent::create($container, $configuration, $plugin_id, $plugin_definition);
-    // Grab the media source.
-    /** @var \Drupal\Core\Entity\EntityTypeManagerInterface */
-    $entityTypeManager = $container->get('entity_type.manager');
+
     $bundle = $formatter->fieldDefinition->getTargetBundle();
     if (!is_string($bundle)) {
       throw new \InvalidArgumentException('Cannot create an IBM video formatter defined for a field type without a target media bundle.');
     }
+
     if ($formatter->fieldDefinition->getTargetEntityTypeId() !== 'media') {
       throw new \InvalidArgumentException('Cannot create an IBM video formatter defined for a field type with a target entity type that is not "media".');
     }
+
+    /** @var \Drupal\Core\Entity\EntityTypeManagerInterface */
+    $entityTypeManager = $container->get('entity_type.manager');
     /** @var \Drupal\media\MediaTypeInterface */
     $mediaType = $entityTypeManager->getStorage('media_type')->load($bundle);
     $source = $mediaType->getSource();

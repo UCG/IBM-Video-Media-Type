@@ -24,14 +24,11 @@ final class ValidationHelpers {
    *   Channel ID.
    *
    * @return bool
-   *   Returns TRUE if the ID is valid (a non-empty string made up of numbers
+   *   Returns TRUE if the ID is valid (a non-empty string made up of digits
    *   from 0-9, inclusive), else returns FALSE.
    */
   public static function isChannelIdValid(string $channelId) : bool {
-    if ($channelId === '') {
-      return FALSE;
-    }
-    return ctype_digit($channelId);
+    return $channelId === '' ? FALSE : ctype_digit($channelId);
   }
 
   /**
@@ -45,10 +42,7 @@ final class ValidationHelpers {
    *   from a-z and A-Z, inclusive), else returns FALSE.
    */
   public static function isChannelVideoIdValid(string $channelVideoId) : bool {
-    if ($channelVideoId === '') {
-      return FALSE;
-    }
-    return ctype_alpha($channelVideoId);
+    return $channelVideoId === '' ? FALSE : ctype_alpha($channelVideoId);
   }
 
 }

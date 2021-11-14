@@ -81,8 +81,8 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *   If $name is a valid metadata property name, returns the metadata property
    *   value. If $name is invalid, returns NULL. If the source field value for
    *   $media is empty, or the first element of the source field is NULL or an
-   *   empty string, returns NULL. If the source field for $media is otherwise
-   *   invalid, the return value is undefined.
+   *   empty string, returns NULL. If the source field for $media is invalid,
+   *   the return value is undefined.
    *
    * @throws \InvalidArgumentException
    *   Thrown if $name is not a string.
@@ -107,7 +107,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       return NULL;
     }
 
-    return $videoData[$name];
+    return array_key_exists($name, $videoData) ? $videoData[$name] : NULL;
   }
 
   /**
@@ -115,8 +115,8 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    */
   public function getMetadataAttributes() : array {
     return [
-      'channelId' => $this->t('The IBM Video channel ID'),
-      'channelVideoId' => $this->t('The video ID within a given channel'),
+      static::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME => $this->t('The IBM Video channel ID'),
+      static::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME => $this->t('The video ID within a given channel'),
     ];
   }
 

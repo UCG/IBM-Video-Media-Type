@@ -12,7 +12,7 @@ use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 
 /**
- * Handles validation for the IBM video source field data.
+ * Handles validation for IBM video source field data.
  *
  * The associated constraint is
  * @see \Drupal\ibm_video_media_type\Plugin\Validation\Constraint\IbmVideoDataConstraint.
@@ -20,7 +20,7 @@ use Symfony\Component\Validator\ConstraintValidator;
 class IbmVideoDataConstraintValidator extends ConstraintValidator {
 
   /**
-   * Validates the given IBM video data field.
+   * Validates the given IBM video source field.
    *
    * @param \Drupal\Core\Field\FieldItemListInterface|null $items
    *   The field list corresponding to the "source" field for the media entity,

@@ -2,7 +2,7 @@
 
 declare (strict_types = 1);
 
-namespace Drupal\ibm_video_media_type\Plugin\FieldWidget;
+namespace Drupal\ibm_video_media_type\Plugin\Field\FieldWidget;
 
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
@@ -12,7 +12,6 @@ use Drupal\ibm_video_media_type\Helper\MediaSourceFieldHelpers;
 use Drupal\ibm_video_media_type\Helper\UrlHelpers;
 use Drupal\ibm_video_media_type\Helper\ValidationHelpers;
 use Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo;
-use Ranine\Helper\StringHelpers;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -81,8 +80,7 @@ EOS
    * {@inheritdoc}
    */
   public function massageFormValues(array $values, array $form, FormStateInterface $form_state) : array {
-    foreach ($values as $delta => &$itemValues) {
-      /** @var int $delta */
+    foreach ($values as &$itemValues) {
       assert(is_array($itemValues) && isset($itemValues['value']));
       $url = (string) $itemValues['value'];
       if ($url === '') {
@@ -96,12 +94,14 @@ EOS
         $parts = explode('/video/', $channelIdAndRemainder);
         assert(count($parts) === 2);
         $channelId = $parts[0];
-        assert(StringHelpers::isNonEmptyString($channelId) && ValidationHelpers::isChannelIdValid($channelId));
+        assert(is_string($channelId));
+        assert(ValidationHelpers::isChannelIdValid($channelId));
         $videoIdAndRemainder = $parts[1];
         $parts = explode('?', $videoIdAndRemainder, 2);
         assert(count($parts) === 2);
         $channelVideoId = $parts[0];
-        assert(StringHelpers::isNonEmptyString($channelVideoId) && ValidationHelpers::isChannelVideoIdValid($channelVideoId));
+        assert(is_string($channelVideoId));
+        assert(ValidationHelpers::isChannelVideoIdValid($channelVideoId));
 
         // Set the field value to the JSON appropriate for the channel and video
         // IDs.
@@ -161,7 +161,7 @@ EOS
    * Creates and returns a new IBM video widget.
    *
    * @param ContainerInterface $container
-   *   Service container
+   *   Service container.
    * @param array $configuration
    *   Configuration array containing information about the plugin instance.
    * @param string $plugin_id
@@ -179,18 +179,20 @@ EOS
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) : IbmVideoWidget {
     // We call parent::create() instead of invoking our own constructor, because
     // Drupal plugin constructors are technically not part of the public API.
-    /** @var \Drupal\ibm_video_media_type\Plugin\FieldWidget\IbmVideoWidget */
+    /** @var \Drupal\ibm_video_media_type\Plugin\Field\FieldWidget\IbmVideoWidget */
     $widget = parent::create($container, $configuration, $plugin_id, $plugin_definition);
-    // Grab the media source.
-    /** @var \Drupal\Core\Entity\EntityTypeManagerInterface */
-    $entityTypeManager = $container->get('entity_type.manager');
+
     $bundle = $widget->fieldDefinition->getTargetBundle();
     if (!is_string($bundle)) {
       throw new \InvalidArgumentException('Cannot create an IBM video widget defined for a field type without a target media bundle.');
     }
+
     if ($widget->fieldDefinition->getTargetEntityTypeId() !== 'media') {
       throw new \InvalidArgumentException('Cannot create an IBM video widget defined for a field type with a target entity type that is not "media".');
     }
+
+    /** @var \Drupal\Core\Entity\EntityTypeManagerInterface */
+    $entityTypeManager = $container->get('entity_type.manager');
     /** @var \Drupal\media\MediaTypeInterface */
     $mediaType = $entityTypeManager->getStorage('media_type')->load($bundle);
     $source = $mediaType->getSource();
