@@ -1,4 +1,4 @@
 name: IBM Video Media Type
 type: module
-description: 'Provides a media type for an embedded IBM Video (streaming or hosted).'
+description: Provides a media type for an embedded IBM Video (streaming or hosted).
 core_version_requirement: ^9

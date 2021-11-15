@@ -3,11 +3,6 @@
 /**
  * @file
  * Hook implementations for the IBM video media type module.
- *
- * @todo Finish bundle for IBM video.
- * @todo Figure out what to do with field validation.
- * @todo Finish code review.
- * @todo Test.
  */
 
 declare (strict_types = 1);

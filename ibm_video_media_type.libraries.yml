@@ -1,4 +1,4 @@
 ibm_video_player:
   css:
     component:
-      css/ibm_video_player.css: {}
+      css/ibm_video_media_type_player.css: {}

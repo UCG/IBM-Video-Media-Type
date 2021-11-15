@@ -71,12 +71,12 @@ class IbmVideoDataConstraintValidator extends ConstraintValidator {
     }
 
     $data = [];
-    $decodeErrors = $source->tryParseVideoData($rawData, $data);
-    if ($decodeErrors === IbmVideo::VIDEO_DATA_PARSE_ERROR_BAD_JSON) {
+    $decodeError = $source->tryParseVideoData($rawData, $data);
+    if ($decodeError === IbmVideo::VIDEO_DATA_PARSE_ERROR_BAD_JSON) {
       $this->context->addViolation($constraint->invalidJsonMessage);
       return;
     }
-    elseif ($decodeErrors === IbmVideo::VIDEO_DATA_PARSE_ERROR_INVALID_KEYS) {
+    elseif ($decodeError === IbmVideo::VIDEO_DATA_PARSE_ERROR_INVALID_KEYS) {
       $this->context->addViolation($constraint->invalidJsonKeySetMessage);
       return;
     }

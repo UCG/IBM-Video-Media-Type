@@ -173,9 +173,10 @@ class IbmVideoFormatter extends FormatterBase {
   public function viewElements(FieldItemListInterface $items, $langcode) : array {
     $entity = $items->getEntity();
     $renderElement = [];
+    $isFirstItem = TRUE;
     foreach ($items as $delta => $item) {
-      // Skip empty items.
-      if ($item === NULL || ($value = (string) $item->value) === '') {
+      // Skip all items except the first item, and skip empty items.
+      if (!$isFirstItem && $item === NULL || ($value = (string) $item->value) === '') {
         $renderElement[$delta] = [];
         goto finish_element_item;
       }
@@ -207,6 +208,7 @@ class IbmVideoFormatter extends FormatterBase {
 finish_element_item:
       // Add the cache metadata associated with the parent media entity.
       CacheableMetadata::createFromObject($entity)->applyTo($renderElement[$delta]);
+      $isFirstItem = FALSE;
     }
 
     return $renderElement;
