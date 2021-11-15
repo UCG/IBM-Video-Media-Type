@@ -12,6 +12,6 @@ source: ibm_video
 queue_thumbnail_downloads: false
 new_revision: true
 source_configuration:
-  source_field: field_ibm_video_media_type_video_data
+  source_field: field_ibm_video_media_type_vdata
 field_map:
   name: name
