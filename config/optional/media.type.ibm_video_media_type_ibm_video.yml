@@ -1,6 +1,5 @@
 langcode: en
 status: true
-dependencies: {  }
 id: ibm_video_media_type_ibm_video
 label: IBM Video
 description: A video hosted or streamed by/with IBM Video.
