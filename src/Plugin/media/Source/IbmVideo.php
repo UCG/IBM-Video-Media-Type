@@ -17,7 +17,7 @@ use Ranine\Helper\ThrowHelpers;
 /**
  * Defines the media type plugin for embedded IBM videos or streams.
  *
- * @MediaType(
+ * @MediaSource(
  *   id = "ibm_video",
  *   label = @Translation("IBM Video"),
  *   description = @Translation("Handles implementation logic for IBM Video media source."),
