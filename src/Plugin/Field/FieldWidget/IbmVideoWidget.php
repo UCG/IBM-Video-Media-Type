@@ -20,9 +20,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * @FieldWidget(
  *   id = "ibm_video_input",
  *   label = @Translation("IBM Video Input"),
- *   field_types = {
- *     "string_long",
- *   },
+ *   field_types = {"string_long"},
  * )
  */
 class IbmVideoWidget extends WidgetBase {

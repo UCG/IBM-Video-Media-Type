@@ -23,7 +23,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * @FieldFormatter(
  *   id = "ibm_video",
  *   label = @Translation("IBM video"),
- *   field_types = {"string_long"}
+ *   field_types = {"string_long"},
  * )
  */
 class IbmVideoFormatter extends FormatterBase {
