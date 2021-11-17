@@ -13,11 +13,8 @@ declare (strict_types = 1);
 function ibm_video_media_type_theme($existing, $type, $theme, $path) {
   return [
     'ibm_video_media_type_player' => [
-      'variables' => [
-        'videoUrl' => '',
-        '#attached' => ['library' => ['css/ibm_video_media_type_player']],
-      ],
-      'template' => 'templates/ibm_video_media_type_player',
+      'variables' => ['videoUrl' => ''],
+      'template' => 'ibm_video_media_type_player',
     ],
   ];
 }
