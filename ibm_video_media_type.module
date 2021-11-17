@@ -3,6 +3,13 @@
 /**
  * @file
  * Hook implementations for the IBM video media type module.
+ *
+ * @todo Fix up labels/descriptions/machine names.
+ * @todo Unify permalink handling.
+ * @todo Finish cleanup in IbmVideo.
+ * @todo Get optional config sorted out.
+ * @todo Figure out what to do about thumbnails.
+ * @todo Test.
  */
 
 declare (strict_types = 1);
