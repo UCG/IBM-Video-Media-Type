@@ -41,7 +41,7 @@ final class UrlHelpers {
     ThrowHelpers::throwIfEmptyString($channelId, 'channelId');
     ThrowHelpers::throwIfEmptyString($channelVideoId, 'channelVideoId');
 
-    return $protocol . 'video.ibm.com/channel' . $channelId . '/video/' . $channelVideoId;
+    return $protocol . 'video.ibm.com/embed/channel/' . $channelId . '/video/' . $channelVideoId;
   }
 
 }

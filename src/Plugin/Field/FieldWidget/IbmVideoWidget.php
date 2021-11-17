@@ -52,23 +52,23 @@ class IbmVideoWidget extends WidgetBase {
       throw new \InvalidArgumentException('$delta is not an integer.');
     }
 
-    $element['value'] = $element + [
+    $element['value'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Permalink Embed URL'),
       '#description' => $this->t(
 <<<'EOS'
 The permalink embed URL for the video. Should be a URL starting with "https://",
 "http://", "//" or nothing at all (""), and followed by
-"video.ibm.com/channel/[channel ID made of digits 0-9]/video/[channel video ID
-made of letters a-z and/or A-Z][optional query string preceeded by '?']". This
-URL may be "cleaned up" by us before it is used to embed the video.
+"video.ibm.com/embed/channel/[channel ID made of digits 0-9]/video/[channel
+video ID made of alphanumeric characters][optional query string preceeded by
+'?']". This URL may be "cleaned up" by us before it is used to embed the video.
 EOS
       ),
       '#default_value' => $this->getDefaultVideoUrl($items, $delta),
       '#size' => 50,
-      '#placeholder' => 'https://video.ibm.com/channel/01234567/video/abcdef',
+      '#placeholder' => 'https://video.ibm.com/embed/channel/01234567/video/abcdef',
       '#maxlength' => 120,
-      '#pattern' => '(?i)(http://|https://|//)?video.ibm.com/channel/[0-9]+/video/[a-z]+(\?.*)?',
+      '#pattern' => '(?i)(http://|https://|//)?video.ibm.com/embed/channel/[0-9]+/video/([a-z]|[0-9])+(\?.*)?',
     ];
 
     return $element;
@@ -86,7 +86,7 @@ EOS
       }
       else {
         // Extract the channel and channel video IDs.
-        $parts = explode('video.ibm.com/channel/', $url, 2);
+        $parts = explode('video.ibm.com/embed/channel/', $url, 2);
         assert(count($parts) === 2);
         $channelIdAndRemainder = $parts[1];
         $parts = explode('/video/', $channelIdAndRemainder);
@@ -147,7 +147,7 @@ EOS
       return NULL;
     }
     $channelVideoId = $videoData[IbmVideo::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME];
-    if (!is_string($channelVideoId) || !ValidationHelpers::isChannelIdValid($channelVideoId)) {
+    if (!is_string($channelVideoId) || !ValidationHelpers::isChannelVideoIdValid($channelVideoId)) {
       return NULL;
     }
     /** @var string $channelId */

@@ -38,11 +38,11 @@ final class ValidationHelpers {
    *   Channel ID.
    *
    * @return bool
-   *   Returns TRUE if the ID is valid (a non-empty string made up of characters
-   *   from a-z and A-Z, inclusive), else returns FALSE.
+   *   Returns TRUE if the ID is valid (a non-empty string made up of
+   *   alphanumeric characters), else returns FALSE.
    */
   public static function isChannelVideoIdValid(string $channelVideoId) : bool {
-    return $channelVideoId === '' ? FALSE : ctype_alpha($channelVideoId);
+    return $channelVideoId === '' ? FALSE : ctype_alnum($channelVideoId);
   }
 
 }
