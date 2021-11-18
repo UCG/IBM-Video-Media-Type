@@ -1,12 +1,16 @@
 langcode: en
 status: true
-id: ibm_video_media_type_ibm_video
+dependencies:
+  config:
+    - field.field.media.ibm_video.field_ibm_video_data
+  module:
+    - ibm_video_media_type
+id: ibm_video
 label: IBM Video
 description: A video hosted or streamed by/with IBM Video.
 source: ibm_video
 queue_thumbnail_downloads: false
 new_revision: true
 source_configuration:
-  source_field: field_ibm_video_media_type_vdata
-field_map:
-  name: name
+  source_field: field_ibm_video_data
+field_map: {}

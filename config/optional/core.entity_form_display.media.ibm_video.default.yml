@@ -1,0 +1,58 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.media.ibm_video.field_ibm_video_data
+    - media.type.ibm_video
+  module:
+    - ibm_video_media_type
+    - path
+id: media.ibm_video.default
+targetEntityType: media
+bundle: ibm_video
+mode: default
+content:
+  created:
+    type: datetime_timestamp
+    weight: 3
+    region: content
+    settings: {}
+    third_party_settings: {}
+  field_ibm_video_data:
+    type: ibm_video_input
+    weight: 1
+    settings: {}
+    third_party_settings: {}
+    region: content
+  name:
+    type: string_textfield
+    weight: 0
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {}
+  path:
+    type: path
+    weight: 4
+    region: content
+    settings: {}
+    third_party_settings: {}
+  status:
+    type: boolean_checkbox
+    settings:
+      display_label: true
+    weight: 5
+    region: content
+    third_party_settings: {}
+  uid:
+    type: entity_reference_autocomplete
+    weight: 2
+    settings:
+      match_operator: CONTAINS
+      size: 60
+      placeholder: ''
+      match_limit: 10
+    region: content
+    third_party_settings: {}
+hidden: {}

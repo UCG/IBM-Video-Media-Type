@@ -6,7 +6,6 @@
  *
  * @todo Unify permalink handling.
  * @todo Finish cleanup in IbmVideo.
- * @todo Get optional config sorted out.
  * @todo Figure out what to do about thumbnails.
  * @todo Test.
  */

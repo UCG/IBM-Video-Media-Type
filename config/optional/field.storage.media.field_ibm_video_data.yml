@@ -3,8 +3,8 @@ status: true
 dependencies:
   module:
     - media
-id: media.field_ibm_video_media_type_vdata
-field_name: field_ibm_video_media_type_vdata
+id: media.field_ibm_video_data
+field_name: field_ibm_video_data
 entity_type: media
 type: string
 settings:
@@ -15,6 +15,6 @@ module: ibm_video_media_type
 locked: false
 cardinality: 1
 translatable: false
-indexes: {  }
+indexes: {}
 persist_with_no_fields: false
 custom_storage: false
