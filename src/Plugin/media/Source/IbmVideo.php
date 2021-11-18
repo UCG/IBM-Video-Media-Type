@@ -7,7 +7,7 @@ namespace Drupal\ibm_video_media_type\Plugin\media\Source;
 use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\field\FieldConfigInterface;
-use Drupal\ibm_video_media_type\Helper\ValidationHelpers;
+use Drupal\ibm_video_media_type\Helper\IbmVideoUrlHelpers;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceFieldConstraintsInterface;
@@ -221,7 +221,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       $channelId = '';
       return FALSE;
     }
-    return ValidationHelpers::isChannelIdValid($channelId);
+    return IbmVideoUrlHelpers::isChannelIdValid($channelId);
   }
 
   /**
@@ -241,8 +241,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       $channelVideoId = '';
       return FALSE;
     }
-
-    return ValidationHelpers::isChannelVideoIdValid($channelVideoId);
+    return IbmVideoUrlHelpers::isChannelVideoIdValid($channelVideoId);
   }
 
   /**

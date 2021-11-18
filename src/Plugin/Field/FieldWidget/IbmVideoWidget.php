@@ -8,9 +8,8 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\WidgetBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\ibm_video_media_type\Helper\IbmVideoUrlHelpers;
 use Drupal\ibm_video_media_type\Helper\MediaSourceFieldHelpers;
-use Drupal\ibm_video_media_type\Helper\UrlHelpers;
-use Drupal\ibm_video_media_type\Helper\ValidationHelpers;
 use Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -66,9 +65,9 @@ EOS
       ),
       '#default_value' => $this->getDefaultVideoUrl($items, $delta),
       '#size' => 50,
-      '#placeholder' => 'https://video.ibm.com/embed/channel/01234567/video/abcdef',
+      '#placeholder' => IbmVideoUrlHelpers::assemblePermalinkUrl('01234567', 'abcdef', 'https://'),
       '#maxlength' => 120,
-      '#pattern' => '(?i)(http://|https://|//)?video.ibm.com/embed/channel/[0-9]+/video/([a-z]|[0-9])+(\?.*)?',
+      '#pattern' => IbmVideoUrlHelpers::PERMALINK_REGEX,
     ];
 
     return $element;
@@ -85,22 +84,11 @@ EOS
         $itemValues['value'] = NULL;
       }
       else {
-        // Extract the channel and channel video IDs.
-        $parts = explode('video.ibm.com/embed/channel/', $url, 2);
-        assert(count($parts) === 2);
-        $channelIdAndRemainder = $parts[1];
-        $parts = explode('/video/', $channelIdAndRemainder);
-        assert(count($parts) === 2);
-        $channelId = $parts[0];
-        assert(is_string($channelId));
-        assert(ValidationHelpers::isChannelIdValid($channelId));
-        $videoIdAndRemainder = $parts[1];
-        $parts = explode('?', $videoIdAndRemainder, 2);
-        assert(count($parts) === 2);
-        $channelVideoId = $parts[0];
-        assert(is_string($channelVideoId));
-        assert(ValidationHelpers::isChannelVideoIdValid($channelVideoId));
-
+        $channelId = '';
+        $channelVideoId = '';
+        IbmVideoUrlHelpers::parsePermalinkUrl($url, $channelId, $channelVideoId);
+        assert(IbmVideoUrlHelpers::isChannelIdValid($channelId));
+        assert(IbmVideoUrlHelpers::isChannelVideoIdValid($channelVideoId));
         // Set the field value to the JSON appropriate for the channel and video
         // IDs.
         $itemValues['value'] = $this->source->prepareVideoData($channelId, $channelVideoId);
@@ -143,16 +131,16 @@ EOS
       return NULL;
     }
     $channelId = $videoData[IbmVideo::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME];
-    if (!is_string($channelId) || !ValidationHelpers::isChannelIdValid($channelId)) {
+    if (!is_string($channelId) || !IbmVideoUrlHelpers::isChannelIdValid($channelId)) {
       return NULL;
     }
     $channelVideoId = $videoData[IbmVideo::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME];
-    if (!is_string($channelVideoId) || !ValidationHelpers::isChannelVideoIdValid($channelVideoId)) {
+    if (!is_string($channelVideoId) || !IbmVideoUrlHelpers::isChannelVideoIdValid($channelVideoId)) {
       return NULL;
     }
     /** @var string $channelId */
     /** @var string $channelVideoId */
-    return UrlHelpers::assembleIbmVideoPermalinkUrl($channelId, $channelVideoId, 'https://');
+    return IbmVideoUrlHelpers::assemblePermalinkUrl($channelId, $channelVideoId, 'https://');
   }
 
   /**

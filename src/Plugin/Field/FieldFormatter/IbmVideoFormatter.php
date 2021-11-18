@@ -10,9 +10,8 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\ibm_video_media_type\Helper\IbmVideoUrlHelpers;
 use Drupal\ibm_video_media_type\Helper\MediaSourceFieldHelpers;
-use Drupal\ibm_video_media_type\Helper\UrlHelpers;
-use Drupal\ibm_video_media_type\Helper\ValidationHelpers;
 use Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo;
 use Ranine\Iteration\ExtendableIterable;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -189,12 +188,12 @@ class IbmVideoFormatter extends FormatterBase {
         goto finish_element_item;
       }
       $channelId = $videoData['channelId'];
-      if (!ValidationHelpers::isChannelIdValid($channelId)) {
+      if (!IbmVideoUrlHelpers::isChannelIdValid($channelId)) {
         $renderElement[$delta] = [];
         goto finish_element_item;
       }
       $channelVideoId = $videoData['channelVideoId'];
-      if (!ValidationHelpers::isChannelVideoIdValid($channelVideoId)) {
+      if (!IbmVideoUrlHelpers::isChannelVideoIdValid($channelVideoId)) {
         $renderElement[$delta] = [];
         goto finish_element_item;
       }
@@ -292,7 +291,7 @@ finish_element_item:
         }
       })->toArray());
     // Use a protocol-neutral protocol prefix ("//").
-    $baseUrl = UrlHelpers::assembleIbmVideoPermalinkUrl($channelId, $channelVideoId, '//');
+    $baseUrl = IbmVideoUrlHelpers::assemblePermalinkUrl($channelId, $channelVideoId, '//');
 
     return $queryString === '' ? $baseUrl : ($baseUrl . '?' . $queryString);
   }

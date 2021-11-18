@@ -4,10 +4,10 @@
  * @file
  * Hook implementations for the IBM video media type module.
  *
- * @todo Unify permalink handling.
  * @todo Figure out what to do about thumbnails.
  * @todo Review.
  * @todo Test.
+ * @todo Decide if restrictions on channel / channel video ID are too tight.
  */
 
 declare (strict_types = 1);
