@@ -5,8 +5,8 @@
  * Hook implementations for the IBM video media type module.
  *
  * @todo Unify permalink handling.
- * @todo Finish cleanup in IbmVideo.
  * @todo Figure out what to do about thumbnails.
+ * @todo Review.
  * @todo Test.
  */
 

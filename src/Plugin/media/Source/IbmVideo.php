@@ -59,11 +59,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    * {@inheritdoc}
    */
   public function createSourceField(MediaTypeInterface $type) : FieldConfigInterface {
-    // Adapted from source of @see \Drupal\media\Plugin\media\Source\OEmbed.
-    $label = (string) $this->t('@type configuration', [
-      '@type' => $this->getPluginDefinition()['label'],
-    ]);
-    return parent::createSourceField($type)->set('label', $label);
+    return parent::createSourceField($type)->set('label', 'IBM Video Data');
   }
 
   /**
