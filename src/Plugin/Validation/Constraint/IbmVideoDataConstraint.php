@@ -12,7 +12,7 @@ use Symfony\Component\Validator\Constraint;
  * @Constraint(
  *   id = "ibm_video_data",
  *   label = @Translation("IBM Video Configuration", context = "Validation"),
- *   type = "string_long"
+ *   type = "string"
  * )
  */
 class IbmVideoDataConstraint extends Constraint {

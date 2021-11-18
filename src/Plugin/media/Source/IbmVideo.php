@@ -21,7 +21,7 @@ use Ranine\Helper\ThrowHelpers;
  *   id = "ibm_video",
  *   label = @Translation("IBM Video"),
  *   description = @Translation("Handles implementation logic for IBM Video media source."),
- *   allowed_field_types = {"string_long"},
+ *   allowed_field_types = {"string"},
  *   default_thumbnail_filename = "no-thumbnail.png",
  * )
  */
