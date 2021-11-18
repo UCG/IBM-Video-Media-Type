@@ -22,7 +22,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @FieldFormatter(
  *   id = "ibm_video",
- *   label = @Translation("IBM video"),
+ *   label = @Translation("IBM Video"),
  *   field_types = {"string_long"},
  * )
  */
@@ -201,7 +201,7 @@ class IbmVideoFormatter extends FormatterBase {
 
       // Render the item with a template defined by this module.
       $renderElement[$delta] = [
-        '#theme' => 'ibm_video_media_type_player',
+        '#theme' => 'ibm_video_player',
         '#videoUrl' => $this->generateVideoUrl($channelId, $channelVideoId),
       ];
 

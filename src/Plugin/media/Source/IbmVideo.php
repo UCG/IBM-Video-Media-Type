@@ -167,8 +167,6 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       'type' => 'ibm_video_input',
       'weight' => $display->getComponent($sourceFieldName)['weight'],
     ]);
-
-    $display->removeComponent('name');
   }
 
   /**

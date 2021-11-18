@@ -4,7 +4,6 @@
  * @file
  * Hook implementations for the IBM video media type module.
  *
- * @todo Fix up labels/descriptions/machine names.
  * @todo Unify permalink handling.
  * @todo Finish cleanup in IbmVideo.
  * @todo Get optional config sorted out.
@@ -19,9 +18,9 @@ declare (strict_types = 1);
  */
 function ibm_video_media_type_theme($existing, $type, $theme, $path) {
   return [
-    'ibm_video_media_type_player' => [
+    'ibm_video_player' => [
       'variables' => ['videoUrl' => ''],
-      'template' => 'ibm_video_media_type_player',
+      'template' => 'ibm_video_player',
     ],
   ];
 }
