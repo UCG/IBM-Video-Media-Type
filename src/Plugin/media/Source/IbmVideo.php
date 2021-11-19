@@ -28,18 +28,11 @@ use Ranine\Helper\ThrowHelpers;
 class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInterface {
 
   /**
-   * Channel ID video data property name.
+   * Video base embed URL video data property name.
    *
    * @var string
    */
-  public const VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME = 'channelId';
-
-  /**
-   * Channel video ID video data property name.
-   *
-   * @var string
-   */
-  public const VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME = 'channelVideoId';
+  public const VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME = 'baseEmbedUrl';
 
   /**
    * Flag for a "JSON malformed" video data parse error.
@@ -56,6 +49,13 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   public const VIDEO_DATA_PARSE_ERROR_INVALID_KEYS = 2;
 
   /**
+   * Video ID video data property name.
+   *
+   * @var string
+   */
+  public const VIDEO_DATA_VIDEO_ID_PROPERTY_NAME = 'videoId';
+
+  /**
    * {@inheritdoc}
    */
   public function createSourceField(MediaTypeInterface $type) : FieldConfigInterface {
@@ -69,9 +69,8 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *   Media entity.
    * @param string $name
    *   Name of metadata field to fetch. Can be either
-   *   static::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME (for the channel ID) or
-   *   static::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME (for the channel video
-   *   ID).
+   *   static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME or
+   *   static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME.
    *
    * @return mixed
    *   If $name is a valid metadata property name, returns the metadata property
@@ -89,9 +88,9 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     }
     /** @var string $name */
 
-    // The video metadata (channel ID and channel video ID) is stored in the
-    // source field as a JSON-encoded string. Grab and decode this JSON, and try
-    // to return the value corresponding to $name.
+    // The video metadata is stored in the source field as a JSON-encoded
+    // string. Grab and decode this JSON, and try to return the value
+    // corresponding to $name.
 
     $videoDataJson = (string) $this->getSourceFieldValue($media);
     if ($videoDataJson === '') {
@@ -111,8 +110,8 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    */
   public function getMetadataAttributes() : array {
     return [
-      static::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME => $this->t('The IBM Video channel ID'),
-      static::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME => $this->t('The video ID within a given channel'),
+      static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME => $this->t('The base embed URL'),
+      static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME => $this->t('The unique video ID'),
     ];
   }
 
@@ -205,23 +204,64 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   }
 
   /**
-   * Validates and retrieves, from the parsed video data, the channel ID.
+   * Validates and retrieves, from the parsed video data, the base embed URL.
    *
    * @param array $parsedVideoData
    *   Parsed video data (from tryParseVideoData()).
-   * @param string $channelId
-   *   (output parameter) If validation was successful, the channel ID.
+   * @param string $baseEmbedUrl
+   *   (output parameter) If validation was successful, the base embed URL.
    *
    * @return bool
-   *   Returns TRUE if the channel ID was valid; else returns FALSE.
+   *   Returns TRUE if the base embed URL was valid; else returns FALSE.
+   *
+   * @throws \InvalidArgumentException
+   *   Thrown if $parsedVideoData does not contain the
+   *   static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME key.
    */
-  public function tryGetChannelId(array $parsedVideoData, string &$channelId) : bool {
-    $channelId = $parsedVideoData[static::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME];
-    if (!is_string($channelId)) {
-      $channelId = '';
+  public function tryGetBaseEmbedUrl(array $parsedVideoData, string &$baseEmbedUrl) : bool {
+    if (!array_key_exists(static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME, $parsedVideoData)) {
+      throw new \InvalidArgumentException('$parsedVideoData does not contain the base embed URL key.');
+    }
+
+    $baseEmbedUrl = $parsedVideoData[static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME];
+    if (!is_string($baseEmbedUrl)) {
+      $baseEmbedUrl = NULL;
       return FALSE;
     }
-    return IbmVideoUrlHelpers::isChannelIdValid($channelId);
+    else {
+      return TRUE;
+    }
+  }
+
+  /**
+   * Validates and retrieves, from the parsed video data, the video ID.
+   *
+   * @param array $parsedVideoData
+   *   Parsed video data (from tryParseVideoData()).
+   * @param string|null $videoId
+   *   (output parameter) If validation was successful, the video ID (or NULL if
+   *   there is no video ID).
+   *
+   * @return bool
+   *   Returns TRUE if the video ID was valid; else returns FALSE.
+   *
+   * @throws \InvalidArgumentException
+   *   Thrown if $parsedVideoData does not contain the
+   *   static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME key.
+   */
+  public function tryGetVideoId(array $parsedVideoData, ?string &$videoId) : bool {
+    if (!array_key_exists(static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME, $parsedVideoData)) {
+      throw new \InvalidArgumentException('$parsedVideoData does not contain the video ID key.');
+    }
+
+    $videoId = $parsedVideoData[static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME];
+    if ($videoId !== NULL && !is_string($videoId)) {
+      $videoId = NULL;
+      return FALSE;
+    }
+    else {
+      return TRUE;
+    }
   }
 
   /**
