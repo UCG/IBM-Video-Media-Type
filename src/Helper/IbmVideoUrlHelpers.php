@@ -7,19 +7,23 @@ namespace Drupal\ibm_video_media_type\Helper;
 use Ranine\Helper\ThrowHelpers;
 
 /**
- * Contains constants and static methods related to IBM video embed URLs.
+ * Contains constants and static methods related to IBM video URLs.
  *
  * @static
  */
 final class IbmVideoUrlHelpers {
-
   /**
-   * Regular expression (without anchors) for a permalink IBM video embed URL.
+   * The regex for a valid lowercase URL path segment.
    *
-   * Assumes the query string can have any characters, and that the protocol
-   * must either be "http://", "https://", "//", or "".
+   * The path segment does not include any forward slashes. Each path segment is
+   * allowed to contain certain characters, as well as "%" followed by two hex
+   * digits. See
+   * https://stackoverflow.com/questions/4669692/valid-characters-for-directory-part-of-a-url-for-short-links.
    */
-  public const PERMALINK_REGEX = '(?i)(http://|https://|//)?video.ibm.com/embed/channel/[0-9]+/video/([a-z]|[0-9])+(\?.*)?';
+  private const REGEX_URL_PATH_SEGMENT_LOWERCASE =
+    '(?:[a-z]|[0-9]|-|\\.|_|~|!|\\$|&|\'|\\(|\\)|\\*|\\+|,|;|=|:|@|(?:%(?:[a-f]|[0-9]){2}))';
+
+  // @todo: Finish this class!
 
   /**
    * Empty private constructor to ensure no one instantiates this class.
