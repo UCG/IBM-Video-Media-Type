@@ -13,8 +13,6 @@ use Ranine\Helper\ThrowHelpers;
  */
 final class IbmVideoUrlHelpers {
 
-  // @todo: Fix up regex stuff.
-
   /**
    * Regex for a base IBM video embed URL.
    *
@@ -86,7 +84,11 @@ final class IbmVideoUrlHelpers {
    *   Base embed URL.
    */
   public static function isBaseEmbedUrlValid(string $baseEmbedUrl) : bool {
-    // @todo: Finish
+    // Use our regex to validate the URL. Use bracket delimiters to avoid having
+    // to escape extra characters in the regex. Also, the regex stored in the
+    // constant is unanchored, so we anchor it here. See also the source for
+    // \Drupal\Core\Render\Element\FormElement::validatePattern().
+    return preg_match('{^(?:' . static::REGEX_BASE_EMBED_URL . ')$}', $baseEmbedUrl);
   }
 
   /**

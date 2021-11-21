@@ -20,7 +20,7 @@ class IbmVideoDataConstraint extends Constraint {
   /**
    * Indicates the channel ID is invalid.
    */
-  public string $invalidBaseEmbedUrl = 'The base embed URL is invalid.';
+  public string $invalidBaseEmbedUrlMessage = 'The base embed URL is invalid.';
 
   /**
    * Indicates the JSON provided has an incorrect set of root-level keys.

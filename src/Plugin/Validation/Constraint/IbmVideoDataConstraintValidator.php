@@ -80,7 +80,12 @@ class IbmVideoDataConstraintValidator extends ConstraintValidator {
       return;
     }
 
-    // @todo: Finish.
+    if (!$source->isBaseEmbedUrlValid($data[IbmVideo::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME])) {
+      $this->context->addViolation($constraint->invalidBaseEmbedUrlMessage);
+    }
+    if (!$source->isVideoIdValid($data[IbmVideo::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME])) {
+      $this->context->addViolation($constraint->invalidVideoIdMessage);
+    }
   }
 
 }

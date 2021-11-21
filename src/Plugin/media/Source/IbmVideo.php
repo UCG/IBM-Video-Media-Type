@@ -7,10 +7,12 @@ namespace Drupal\ibm_video_media_type\Plugin\media\Source;
 use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\field\FieldConfigInterface;
+use Drupal\ibm_video_media_type\Helper\IbmVideoUrl\IbmVideoUrlHelpers;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceFieldConstraintsInterface;
 use Drupal\media\MediaTypeInterface;
+use Ranine\Helper\StringHelpers;
 use Ranine\Helper\ThrowHelpers;
 
 /**
@@ -144,6 +146,35 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   }
 
   /**
+   * Validates the given base embed URL.
+   *
+   * @param mixed $baseEmbedUrl
+   *   Base embed URL (an element from the array returned by
+   *   tryParseVideoData()).
+   *
+   * @return bool
+   *   Returns TRUE if the base embed URL is of type "string" and is otherwise
+   *   valid; else FALSE.
+   */
+  public function isBaseEmbedUrlValid($baseEmbedUrl) : bool {
+    return (is_string($baseEmbedUrl) && IbmVideoUrlHelpers::isBaseEmbedUrlValid($baseEmbedUrl)) ? TRUE : FALSE;
+  }
+
+  /**
+   * Validates the given video ID.
+   *
+   * @param mixed $videoId
+   *   Video ID (an element from the array returned by tryParseVideoData()).
+   *
+   * @return bool
+   *   Returns TRUE if the video ID is of type "string" and is otherwise valid;
+   *   else FALSE.
+   */
+  public function isVideoIdValid($videoId) : bool {
+    return StringHelpers::isNonEmptyString($videoId);
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function prepareFormDisplay(MediaTypeInterface $type, EntityFormDisplayInterface $display) : void {
@@ -200,69 +231,6 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       'type' => 'ibm_video',
       'label' => 'visually_hidden',
     ]);
-  }
-
-  /**
-   * Validates and retrieves, from the parsed video data, the base embed URL.
-   *
-   * @param array $parsedVideoData
-   *   Parsed video data (from tryParseVideoData()).
-   * @param string $baseEmbedUrl
-   *   (output parameter) If validation was successful, the base embed URL.
-   *
-   * @return bool
-   *   Returns TRUE if the base embed URL was valid; else returns FALSE.
-   *
-   * @throws \InvalidArgumentException
-   *   Thrown if $parsedVideoData does not contain the
-   *   static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME key.
-   */
-  public function tryGetBaseEmbedUrl(array $parsedVideoData, string &$baseEmbedUrl) : bool {
-    // @todo: Fix.
-    if (!array_key_exists(static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME, $parsedVideoData)) {
-      throw new \InvalidArgumentException('$parsedVideoData does not contain the base embed URL key.');
-    }
-
-    $baseEmbedUrl = $parsedVideoData[static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME];
-    if (!is_string($baseEmbedUrl)) {
-      $baseEmbedUrl = NULL;
-      return FALSE;
-    }
-    else {
-      return TRUE;
-    }
-  }
-
-  /**
-   * Validates and retrieves, from the parsed video data, the video ID.
-   *
-   * @param array $parsedVideoData
-   *   Parsed video data (from tryParseVideoData()).
-   * @param string|null $videoId
-   *   (output parameter) If validation was successful, the video ID (or NULL if
-   *   there is no video ID).
-   *
-   * @return bool
-   *   Returns TRUE if the video ID was valid; else returns FALSE.
-   *
-   * @throws \InvalidArgumentException
-   *   Thrown if $parsedVideoData does not contain the
-   *   static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME key.
-   */
-  public function tryGetVideoId(array $parsedVideoData, ?string &$videoId) : bool {
-    // @todo: Fix (are empty strings invalid? -- and related stuff).
-    if (!array_key_exists(static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME, $parsedVideoData)) {
-      throw new \InvalidArgumentException('$parsedVideoData does not contain the video ID key.');
-    }
-
-    $videoId = $parsedVideoData[static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME];
-    if ($videoId !== NULL && !is_string($videoId)) {
-      $videoId = NULL;
-      return FALSE;
-    }
-    else {
-      return TRUE;
-    }
   }
 
   /**
