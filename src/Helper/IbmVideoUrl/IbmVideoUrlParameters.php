@@ -95,6 +95,12 @@ class IbmVideoUrlParameters {
   private ?int $wMode = NULL;
 
   /**
+   * Creates a default set of reasonable video URL parameters.
+   */
+  public function __construct() {
+  }
+
+  /**
    * Gets the default quality property.
    *
    * @return int|null
