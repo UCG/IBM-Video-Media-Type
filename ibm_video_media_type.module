@@ -5,7 +5,7 @@
  * Hook implementations for the IBM video media type module.
  *
  * @todo Switch over to using non-permalink URLs and gathering embed URL +
- * video ID (including finishing ImbVideoUrlHelpers.php).
+ * video ID.
  * @todo Implement thumbnail support.
  * @todo Review.
  * @todo Test.
