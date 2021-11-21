@@ -5,7 +5,6 @@ declare (strict_types = 1);
 namespace Drupal\ibm_video_media_type\Plugin\Validation\Constraint;
 
 use Drupal\Core\Field\FieldItemListInterface;
-use Drupal\ibm_video_media_type\Helper\ValidationHelpers;
 use Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo;
 use Drupal\media\MediaInterface;
 use Symfony\Component\Validator\Constraint;
@@ -80,12 +79,8 @@ class IbmVideoDataConstraintValidator extends ConstraintValidator {
       $this->context->addViolation($constraint->invalidJsonKeySetMessage);
       return;
     }
-    if (!ValidationHelpers::isChannelIdValid($data[IbmVideo::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME])) {
-      $this->context->addViolation($constraint->invalidChannelIdMessage);
-    }
-    if (!ValidationHelpers::isChannelVideoIdValid($data[IbmVideo::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME])) {
-      $this->context->addViolation($constraint->invalidChannelVideoIdMessage);
-    }
+
+    // @todo: Finish.
   }
 
 }

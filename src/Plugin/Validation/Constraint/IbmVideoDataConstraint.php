@@ -20,12 +20,7 @@ class IbmVideoDataConstraint extends Constraint {
   /**
    * Indicates the channel ID is invalid.
    */
-  public string $invalidChannelIdMessage = 'The channel ID is invalid.';
-
-  /**
-   * Indicates the channel video ID is invalid.
-   */
-  public string $invalidChannelVideoIdMessage = 'The channel video ID is invalid.';
+  public string $invalidBaseEmbedUrl = 'The base embed URL is invalid.';
 
   /**
    * Indicates the JSON provided has an incorrect set of root-level keys.
@@ -36,5 +31,10 @@ class IbmVideoDataConstraint extends Constraint {
    * Indicates the IBM video data string is not valid JSON.
    */
   public string $invalidJsonMessage = 'The string provided is not valid JSON.';
+
+  /**
+   * Indicates the video ID is invalid.
+   */
+  public string $invalidVideoIdMessage = 'The video ID is invalid.';
 
 }

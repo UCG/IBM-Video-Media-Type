@@ -7,7 +7,6 @@ namespace Drupal\ibm_video_media_type\Plugin\media\Source;
 use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\field\FieldConfigInterface;
-use Drupal\ibm_video_media_type\Helper\IbmVideoUrlHelpers;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceFieldConstraintsInterface;
@@ -219,6 +218,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *   static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME key.
    */
   public function tryGetBaseEmbedUrl(array $parsedVideoData, string &$baseEmbedUrl) : bool {
+    // @todo: Fix.
     if (!array_key_exists(static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME, $parsedVideoData)) {
       throw new \InvalidArgumentException('$parsedVideoData does not contain the base embed URL key.');
     }
@@ -250,6 +250,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *   static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME key.
    */
   public function tryGetVideoId(array $parsedVideoData, ?string &$videoId) : bool {
+    // @todo: Fix (are empty strings invalid? -- and related stuff).
     if (!array_key_exists(static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME, $parsedVideoData)) {
       throw new \InvalidArgumentException('$parsedVideoData does not contain the video ID key.');
     }
@@ -265,36 +266,17 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   }
 
   /**
-   * Validates and retrieves, from the parsed video data, the channel video ID.
-   *
-   * @param array $parsedVideoData
-   *   Parsed video data (from tryParseVideoData()).
-   * @param string $channelVideoId
-   *   (output parameter) If validation was successful, the channel video ID.
-   *
-   * @return bool
-   *   Returns TRUE if the channel video ID was valid; else returns FALSE.
-   */
-  public function tryGetChannelVideoId(array $parsedVideoData, string &$channelVideoId) : bool {
-    $channelVideoId = $parsedVideoData[static::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME];
-    if (!is_string($channelVideoId)) {
-      $channelVideoId = '';
-      return FALSE;
-    }
-    return IbmVideoUrlHelpers::isChannelVideoIdValid($channelVideoId);
-  }
-
-  /**
    * Parses data from the source field into an array.
    *
    * @param string $data
    *   Data from the first item of the source field.
    * @param array<string, mixed> $parsedData
    *   (output parameter) If parsing was successful, this is an array consisting
-   *   of two items: one with key static::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME
-   *   containing the channel ID (the channel ID is not validated, though), and
-   *   another with key static::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME containing
-   *   the channel video ID (which is also not validated).
+   *   of two items: one with key
+   *   static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME containing the base
+   *   video embed URL (which is not validated), and another with key
+   *   static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME containing the video ID (which
+   *   is likewise unvalidated).
    *
    * @return int
    *   Returns 0 on success. Otherwise, returns either
@@ -309,7 +291,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
         $parsedData = [];
         return static::VIDEO_DATA_PARSE_ERROR_INVALID_KEYS;
       }
-      if (!array_key_exists(static::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME, $parsedData) || !array_key_exists(static::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME, $parsedData)) {
+      if (!array_key_exists(static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME, $parsedData) || !array_key_exists(static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME, $parsedData)) {
         $parsedData = [];
         return static::VIDEO_DATA_PARSE_ERROR_INVALID_KEYS;
       }

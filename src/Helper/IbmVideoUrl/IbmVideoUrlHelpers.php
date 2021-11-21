@@ -13,6 +13,8 @@ use Ranine\Helper\ThrowHelpers;
  */
 final class IbmVideoUrlHelpers {
 
+  // @todo: Fix up regex stuff.
+
   /**
    * Regex for a base IBM video embed URL.
    *
@@ -75,6 +77,16 @@ final class IbmVideoUrlHelpers {
    * Empty private constructor to ensure no one instantiates this class.
    */
   private function __construct() {
+  }
+
+  /**
+   * Tells whether the given base embed URL is valid.
+   *
+   * @param string $baseEmbedUrl
+   *   Base embed URL.
+   */
+  public static function isBaseEmbedUrlValid(string $baseEmbedUrl) : bool {
+    // @todo: Finish
   }
 
   /**
