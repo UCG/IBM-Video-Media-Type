@@ -4,6 +4,8 @@ declare (strict_types = 1);
 
 namespace Drupal\ibm_video_media_type\Helper\IbmVideoUrl;
 
+use Drupal\Component\Utility\UrlHelper;
+
 /**
  * A set of IBM video embed URL parameters.
  */
@@ -342,6 +344,136 @@ class IbmVideoUrlParameters {
     }
 
     return UrlHelper::buildQuery($query);
+  }
+
+  /**
+   * Tells whether the given default quality is valid.
+   *
+   * The default quality is valid if it is of type "int" and is one of the
+   * static::DEFAULT_QUALITY_* values.
+   *
+   * @param mixed $defaultQuality
+   *   Default quality.
+   */
+  public static function validateDefaultQuality($defaultQuality) : bool {
+    return (is_int($defaultQuality) && static::validateDefaultQualityInternal($defaultQuality)) ? TRUE : FALSE;
+  }
+
+  /**
+   * Tells whether the given initial volume is valid.
+   *
+   * The initial volume is valid if it is of type "int" and is in the range
+   * 0-100, inclusive.
+   *
+   * @param mixed $initialVolume
+   *   Initial volume.
+   */
+  public static function validateInitialVolume($initialVolume) : bool {
+    return (is_int($initialVolume) && static::validateInitialVolumeInternal($initialVolume)) ? TRUE : FALSE;
+  }
+
+  /**
+   * Tells whether the given "show title" flag is valid.
+   *
+   * The flag is valid if it is of type "bool."
+   *
+   * @param mixed $showTitle
+   *   Show title flag.
+   */
+  public static function validateShowTitleFlag($showTitle) : bool {
+    return is_bool($showTitle);
+  }
+
+  /**
+   * Tells whether the given "use autoplay" flag is valid.
+   *
+   * The flag is valid if it is of type "bool."
+   *
+   * @param mixed $useAutoplay
+   *   Use autoplay flag.
+   */
+  public static function validateUseAutoplayFlag($useAutoplay) : bool {
+    return is_bool($useAutoplay);
+  }
+
+  /**
+   * Tells whether the given "use HTML5 UI" flag is valid.
+   *
+   * The flag is valid if it is of type "bool."
+   *
+   * @param mixed $useHtml5Ui
+   *   Use HTML5 UI flag.
+   */
+  public static function validateUseHtml5UiFlag($useHtml5Ui) : bool {
+    return is_bool($useHtml5Ui);
+  }
+
+  /**
+   * Tells whether the given WMode is valid.
+   *
+   * The WMode is valid if it is of type "int" and is one of the static::WMODE_*
+   * values.
+   *
+   * @param mixed $wMode
+   *   WMode.
+   */
+  public static function validateWMode($wMode) : bool {
+    return (is_int($wMode) && static::validateWModeInternal($wMode)) ? TRUE : FALSE;
+  }
+
+  /**
+   * Tells whether the given default quality is valid.
+   *
+   * The default quality is valid if it is one of the static::DEFAULT_QUALITY_*
+   * values.
+   *
+   * @param int $defaultQuality
+   *   Default quality.
+   */
+  private static function validateDefaultQualityInternal(int $defaultQuality) : bool {
+    switch ($defaultQuality) {
+      case static::DEFAULT_QUALITY_LOW:
+      case static::DEFAULT_QUALITY_MEDIUM:
+      case static::DEFAULT_QUALITY_HIGH:
+        return TRUE;
+
+      default:
+        return FALSE;
+    }
+  }
+
+  /**
+   * Tells whether the given default quality is valid.
+   *
+   * The default quality is valid if it is one of the static::DEFAULT_QUALITY_*
+   * values.
+   *
+   * @param mixed $defaultQuality
+   *   Default quality.
+   */
+  private static function validateInitialVolumeInternal(int $initialVolume) : bool {
+    return ($initialVolume >= 0 && $initialVolume <= 100) ? TRUE : FALSE;
+  }
+
+  /**
+   * Tells whether the given WMode is valid.
+   *
+   * The WMode is valid if it is one of the static::WMODE_* values.
+   *
+   * @param int $wMode
+   *   WMode.
+   */
+  public static function validateWModeInternal(int $wMode) : bool {
+    switch ($wMode) {
+      case static::WMODE_DIRECT:
+      case static::WMODE_OPAQUE:
+      case static::WMODE_TRANSPARENT:
+      case static::WMODE_WINDOW:
+        return TRUE;
+
+      default:
+        return FALSE;
+    }
   }
 
 }
