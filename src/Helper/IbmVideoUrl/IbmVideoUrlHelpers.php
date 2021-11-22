@@ -17,7 +17,7 @@ final class IbmVideoUrlHelpers {
    * Regex for a base IBM video embed URL.
    *
    * This should be used to match an embed URL with neither query, fragment nor
-   * protocol.
+   * scheme.
    */
   public const REGEX_BASE_EMBED_URL =
     '(?i)video.ibm.com/embed/(?:recorded/)?'
@@ -26,7 +26,7 @@ final class IbmVideoUrlHelpers {
   /**
    * Regex for an IBM video embed URL.
    *
-   * The protocol must be "https://", "http://", "//", or "". Note that some
+   * The scheme must be "https://", "http://", "//", or "". Note that some
    * invalid embed URLs (with invalid video IDs, etc.) may still match this
    * regex.
    *
@@ -78,40 +78,40 @@ final class IbmVideoUrlHelpers {
   }
 
   /**
-   * Tells whether the given base embed URL is valid.
+   * Returns the embed URL associated with the arguments provided.
    *
    * @param string $baseEmbedUrl
-   *   Base embed URL.
+   *   Base embed URL (no scheme, query, or fragment).
+   * @param string $scheme
+   *   Scheme. Can be empty.
+   * @param IbmVideoUrlParameters $parameters
+   *   Video player parameters to include in query string of returned URL.
+   *
+   * @throws \InvalidArgumentException
+   *   Thrown if $baseEmbedUrl is empty.
    */
-  public static function isBaseEmbedUrlValid(string $baseEmbedUrl) : bool {
-    // Use our regex to validate the URL. Use bracket delimiters to avoid having
-    // to escape extra characters in the regex. Also, the regex stored in the
-    // constant is unanchored, so we anchor it here. See also the source for
-    // \Drupal\Core\Render\Element\FormElement::validatePattern().
-    return preg_match('{^(?:' . static::REGEX_BASE_EMBED_URL . ')$}', $baseEmbedUrl);
+  public static function assembleEmbedUrl(string $baseEmbedUrl, string $scheme, IbmVideoUrlParameters $parameters) : string {
+    ThrowHelpers::throwIfEmptyString($baseEmbedUrl, 'baseEmbedUrl');
+    return ($scheme . $baseEmbedUrl . $parameters->toEmbedUrlQueryString());
   }
 
   /**
-   * Parses and cleans the given video embed URL.
+   * Extracts the base embed URL (and poss. video ID) from the given embed URL.
    *
    * @param string $embedUrl
-   *   "Dirty" embed URL. Assumed to be valid (i.e., to match
-   *   static::REGEX_EMBED_URL).
-   * @param string $protocol
-   *   Protocol to use in cleaned URL (everything before the start of the
-   *   domain).
+   *   Embed URL. Assumed to be valid (i.e., to match static::REGEX_EMBED_URL).
    * @param string|null $videoId
    *   (output parameter) The video ID, if it exists; otherwise NULL. Undefined
    *   if $embedUrl is invalid.
    *
    * @return string
-   *   Cleaned (base) embed URL, with the protocol, query, and fragment
-   *   stripped. Undefined if $embedUrl is not valid.
+   *   Base embed URL: the scheme, query, and fragment is stripped from the
+   *   input embed URL. Undefined if $embedUrl is not valid.
    *
    * @throws \InvalidArgumentException
    *   Thrown in some cases in $embedUrl is invalid.
    */
-  public static function parseAndCleanEmbedUrl(string $embedUrl, ?string &$videoId) : string {
+  public static function extractBaseEmbedUrlAndVideoId(string $embedUrl, ?string &$videoId) : string {
     ThrowHelpers::throwIfEmptyString($embedUrl, 'embedUrl');
     $invalidUrlConditionalThrow = function(bool $shouldThrow) : void {
       if ($shouldThrow) { throw new \InvalidArgumentException('$url is invalid.'); } };
@@ -132,6 +132,20 @@ final class IbmVideoUrlHelpers {
       $videoId = NULL;
       return 'video.ibm.com/embed/' . static::getSubstringUpTo(0, $remainder, '?');
     }
+  }
+
+  /**
+   * Tells whether the given base embed URL is valid.
+   *
+   * @param string $baseEmbedUrl
+   *   Base embed URL.
+   */
+  public static function isBaseEmbedUrlValid(string $baseEmbedUrl) : bool {
+    // Use our regex to validate the URL. Use bracket delimiters to avoid having
+    // to escape extra characters in the regex. Also, the regex stored in the
+    // constant is unanchored, so we anchor it here. See also the source for
+    // \Drupal\Core\Render\Element\FormElement::validatePattern().
+    return preg_match('{^(?:' . static::REGEX_BASE_EMBED_URL . ')$}', $baseEmbedUrl);
   }
 
   /**
