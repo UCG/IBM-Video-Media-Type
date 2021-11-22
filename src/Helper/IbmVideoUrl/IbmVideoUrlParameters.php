@@ -279,5 +279,69 @@ class IbmVideoUrlParameters {
     $this->wMode = $wMode;
     return $this;
   }
+  
+  /**
+   * Converts this set of parameters into a query string.
+   *
+   * @return string
+   *   A query string for use in an embed URL.
+   */
+  public function toEmbedUrlQueryString() : string {
+    if ($this->defaultQuality !== NULL) {
+      switch ($this->defaultQuality) {
+        case static::DEFAULT_QUALITY_LOW:
+          $defaultQualityStringRep = 'low';
+          break;
+
+        case static::DEFAULT_QUALITY_MEDIUM:
+          $defaultQualityStringRep = 'medium';
+          break;
+
+        case static::DEFAULT_QUALITY_HIGH:
+          $defaultQualityStringRep = 'high';
+          break;
+
+        default:
+          throw new \RuntimeException('Unexpected default quality.');
+      }
+    }
+    if ($this->wMode !== NULL) {
+      switch ($this->wMode) {
+        case static::WMODE_DIRECT:
+          $wModeStringRep = 'direct';
+          break;
+
+        case static::WMODE_OPAQUE:
+          $wModeStringRep = 'opaque';
+          break;
+
+        case static::WMODE_TRANSPARENT:
+          $wModeStringRep = 'transparent';
+          break;
+
+        case static::WMODE_WINDOW:
+          $wModeStringRep = 'window';
+          break;
+
+        default:
+          throw new \RuntimeException('Unexpected WMode.');
+      }
+    }
+    $trueFalseTextBoolConversion = fn(bool $s) : string => $s ? 'true' : 'false';
+    $query = [
+      'initialVolume' => (string) $this->initialVolume,
+      'showTitle' => $trueFalseTextBoolConversion($this->showTitle),
+      'useAutoplay' => $trueFalseTextBoolConversion($this->useAutoplay),
+      'useHtml5Ui' => $this->useHtml5Ui ? '1' : '0',
+    ];
+    if ($this->defaultQuality !== NULL) {
+      $query['defaultQuality'] = $defaultQualityStringRep;
+    }
+    if ($this->wMode !== NULL) {
+      $query['wMode'] = $wModeStringRep;
+    }
+
+    return UrlHelper::buildQuery($query);
+  }
 
 }
