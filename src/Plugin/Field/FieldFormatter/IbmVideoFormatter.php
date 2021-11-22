@@ -10,7 +10,8 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\ibm_video_media_type\Helper\IbmVideoUrlHelpers;
+use Drupal\ibm_video_media_type\Helper\IbmVideoUrl\IbmVideoUrlHelpers;
+use Drupal\ibm_video_media_type\Helper\IbmVideoUrl\IbmVideoUrlParameters;
 use Drupal\ibm_video_media_type\Helper\MediaSourceFieldHelpers;
 use Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo;
 use Ranine\Iteration\ExtendableIterable;
@@ -70,10 +71,10 @@ class IbmVideoFormatter extends FormatterBase {
         '#title' => $this->t('WMode'),
         '#default_value' => $this->prepareSetting('wMode'),
         '#options' => [
-          static::SETTING_WMODE_DIRECT => 'Direct',
-          static::SETTING_WMODE_OPAQUE => 'Opaque',
-          static::SETTING_WMODE_TRANSPARENT => 'Transparent',
-          static::SETTING_WMODE_WINDOW => 'Window',
+          IbmVideoUrlParameters::WMODE_DIRECT => 'Direct',
+          IbmVideoUrlParameters::WMODE_OPAQUE => 'Opaque',
+          IbmVideoUrlParameters::WMODE_TRANSPARENT => 'Transparent',
+          IbmVideoUrlParameters::WMODE_WINDOW => 'Window',
         ],
       ],
       'defaultQuality' => [
@@ -81,9 +82,9 @@ class IbmVideoFormatter extends FormatterBase {
         '#title' => $this->t('Default Quality'),
         '#default_value' => $this->prepareSetting('defaultQuality'),
         '#options' => [
-          static::SETTING_DEFAULT_QUALITY_LOW => 'Low',
-          static::SETTING_DEFAULT_QUALITY_MEDIUM => 'Medium',
-          static::SETTING_DEFAULT_QUALITY_HIGH => 'High',
+          IbmVideoUrlParameters::DEFAULT_QUALITY_LOW => 'Low',
+          IbmVideoUrlParameters::DEFAULT_QUALITY_MEDIUM => 'Medium',
+          IbmVideoUrlParameters::DEFAULT_QUALITY_HIGH => 'High',
         ],
       ],
     ];
@@ -92,9 +93,10 @@ class IbmVideoFormatter extends FormatterBase {
   /**
    * Returns the render array, keyed by delta, for the given field items.
    *
-   * NULL, empty, and invalid field items are skipped. Each field item is
-   * parsed as a JSON string of video metadata, in accordance with what is
-   * defined in @see \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo.
+   * Only the first item is rendered, and it is not rendered if it is NULL,
+   * empty, or invalid. It is parsed, if possible, as a JSON string of video
+   * metadata, in accordance with what is defined in
+   * @see \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo.
    *
    * @param \Drupal\Core\Field\FieldItemListInterface $items
    *   Field items.
@@ -108,42 +110,45 @@ class IbmVideoFormatter extends FormatterBase {
   public function viewElements(FieldItemListInterface $items, $langcode) : array {
     $entity = $items->getEntity();
     $renderElement = [];
-    $isFirstItem = TRUE;
+    $firstItemPassed = FALSE;
     foreach ($items as $delta => $item) {
       // Skip all items except the first item, and skip empty items.
-      if (!$isFirstItem && $item === NULL || ($value = (string) $item->value) === '') {
+      if ($firstItemPassed || $item === NULL || ($value = (string) $item->value) === '') {
         $renderElement[$delta] = [];
         goto finish_element_item;
       }
 
-      // Try to extract channel ID and channel video ID from field value. Skip
-      // invalid field items.
+      // Try to extract base embed URL and video ID from field item.
       $videoData = [];
       if ($this->source->tryParseVideoData($value, $videoData) !== 0) {
         $renderElement[$delta] = [];
         goto finish_element_item;
       }
-      $channelId = $videoData['channelId'];
-      if (!IbmVideoUrlHelpers::isChannelIdValid($channelId)) {
+      $baseEmbedUrl = $videoData['baseEmbedUrl'];
+      if (!$this->source->isBaseEmbedUrlValid($baseEmbedUrl)) {
         $renderElement[$delta] = [];
         goto finish_element_item;
       }
-      $channelVideoId = $videoData['channelVideoId'];
-      if (!IbmVideoUrlHelpers::isChannelVideoIdValid($channelVideoId)) {
+      /** @var string $baseEmbedUrl */
+      $videoId = $videoData['channelVideoId'];
+      if (!$this->source->isVideoIdValid($videoId)) {
         $renderElement[$delta] = [];
         goto finish_element_item;
       }
+      /** @var string $videoId */
 
-      // Render the item with a template defined by this module.
+      // Render the item with a template defined by this module. We use the "//"
+      // "scheme" when generating the embed URL, to force the embed iFrame
+      // to be served from the same protocol as is the main website.
       $renderElement[$delta] = [
         '#theme' => 'ibm_video_player',
-        '#videoUrl' => $this->generateVideoUrl($channelId, $channelVideoId),
+        '#videoUrl' => IbmVideoUrlHelpers::assembleEmbedUrl($baseEmbedUrl, '//', $this->getUrlParameters()),
       ];
 
 finish_element_item:
       // Add the cache metadata associated with the parent media entity.
       CacheableMetadata::createFromObject($entity)->applyTo($renderElement[$delta]);
-      $isFirstItem = FALSE;
+      $firstItemPassed = TRUE;
     }
 
     return $renderElement;
