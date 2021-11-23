@@ -8,7 +8,7 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\WidgetBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\ibm_video_media_type\Helper\IbmVideoUrlHelpers;
+use Drupal\ibm_video_media_type\Helper\IbmVideoUrl\IbmVideoUrlHelpers;
 use Drupal\ibm_video_media_type\Helper\MediaSourceFieldHelpers;
 use Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -53,21 +53,22 @@ class IbmVideoWidget extends WidgetBase {
 
     $element['value'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('Permalink Embed URL'),
+      '#title' => $this->t('Embed URL'),
       '#description' => $this->t(
 <<<'EOS'
-The permalink embed URL for the video. Should be a URL starting with "https://",
+The canonical embed URL for the video. Should be a URL starting with "https://",
 "http://", "//" or nothing at all (""), and followed by
-"video.ibm.com/embed/channel/[channel ID made of digits 0-9]/video/[channel
-video ID made of alphanumeric characters][optional query string preceeded by
-'?']". This URL may be "cleaned up" by us before it is used to embed the video.
+"video.ibm.com/recorded/[video ID]" (for a recorded video) or
+"video.ibm.com/[channel ID]" (for a stream), with an optional query string
+and/or fragment. This URL may be "cleaned up" before it is used to embed the
+video.
 EOS
       ),
       '#default_value' => $this->getDefaultVideoUrl($items, $delta),
       '#size' => 50,
-      '#placeholder' => IbmVideoUrlHelpers::assemblePermalinkUrl('01234567', 'abcdef', 'https://'),
+      '#placeholder' => 'video.ibm.com/012345678',
       '#maxlength' => 120,
-      '#pattern' => IbmVideoUrlHelpers::PERMALINK_REGEX,
+      '#pattern' => IbmVideoUrlHelpers::REGEX_EMBED_URL,
     ];
 
     return $element;
@@ -84,14 +85,11 @@ EOS
         $itemValues['value'] = NULL;
       }
       else {
-        $channelId = '';
-        $channelVideoId = '';
-        IbmVideoUrlHelpers::parsePermalinkUrl($url, $channelId, $channelVideoId);
-        assert(IbmVideoUrlHelpers::isChannelIdValid($channelId));
-        assert(IbmVideoUrlHelpers::isChannelVideoIdValid($channelVideoId));
-        // Set the field value to the JSON appropriate for the channel and video
-        // IDs.
-        $itemValues['value'] = $this->source->prepareVideoData($channelId, $channelVideoId);
+        $videoId = NULL;
+        $baseEmbedUrl = IbmVideoUrlHelpers::extractBaseEmbedUrlAndVideoId($url, $videoId);
+        // Set the field value to the JSON appropriate for the base embed URL
+        // and video ID.
+        $itemValues['value'] = $this->source->prepareVideoData($baseEmbedUrl, $videoId);
       }
     }
 
@@ -107,13 +105,13 @@ EOS
    *   Position of field item in list.
    *
    * @return string|null
-   *   Default video URL, or NULL if the field is not set to a valid value at
-   *   $delta.
+   *   Default video URL, or NULL if the field is not set (or set to NULL) at
+   *   $delta. Also can be NULL if the field is corrupt at $delta.
    */
   private function getDefaultVideoUrl(FieldItemListInterface $items, int $delta) : ?string {
     // Build an IBM video URL to use as the default value for the text field. If
-    // is nothing is set for the field item, or the item is incorrectly
-    // formatted, don't display anything for the default value.
+    // is nothing is set for the field item, don't display anything for the
+    // default value.
 
     if (!isset($items[$delta])) {
       return NULL;
@@ -130,17 +128,8 @@ EOS
     if ($this->source->tryParseVideoData($value, $videoData) !== 0) {
       return NULL;
     }
-    $channelId = $videoData[IbmVideo::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME];
-    if (!is_string($channelId) || !IbmVideoUrlHelpers::isChannelIdValid($channelId)) {
-      return NULL;
-    }
-    $channelVideoId = $videoData[IbmVideo::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME];
-    if (!is_string($channelVideoId) || !IbmVideoUrlHelpers::isChannelVideoIdValid($channelVideoId)) {
-      return NULL;
-    }
-    /** @var string $channelId */
-    /** @var string $channelVideoId */
-    return IbmVideoUrlHelpers::assemblePermalinkUrl($channelId, $channelVideoId, 'https://');
+    $baseEmbedUrl = $videoData[IbmVideo::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME];
+    return (is_string($baseEmbedUrl) && IbmVideoUrlHelpers::isBaseEmbedUrlValid($baseEmbedUrl)) ? $baseEmbedUrl : NULL;
   }
 
   /**

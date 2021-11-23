@@ -197,24 +197,18 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   /**
    * Assembles the given parameters for use in the source field value.
    *
-   * @param string $channelId
-   *   Channel ID.
-   * @param string $channelVideoId
-   *   Channel video ID.
+   * @param string $baseEmbedUrl
+   *   Base embed URL (assumed to be valid).
+   * @param string $videoId
+   *   Video ID (assumed to be valid).
    *
    * @return string
    *   Source field value generated from the function arguments.
-   *
-   * @throws \InvalidArgumentException
-   *   Thrown if $channelId or $channelVideoId is empty.
    */
-  public function prepareVideoData(string $channelId, string $channelVideoId) : string {
-    ThrowHelpers::throwIfEmptyString($channelId, 'channelId');
-    ThrowHelpers::throwIfEmptyString($channelVideoId, 'channelVideoId');
-
+  public function prepareVideoData(string $baseEmbedUrl, string $videoId) : string {
     return json_encode([
-      static::VIDEO_DATA_CHANNEL_ID_PROPERTY_NAME => $channelId,
-      static::VIDEO_DATA_CHANNEL_VIDEO_ID_PROPERTY_NAME => $channelVideoId,
+      static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME => $baseEmbedUrl,
+      static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME => $videoId,
     ]);
   }
 
