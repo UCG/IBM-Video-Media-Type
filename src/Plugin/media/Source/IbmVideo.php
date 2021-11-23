@@ -49,11 +49,11 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   public const VIDEO_DATA_PARSE_ERROR_INVALID_KEYS = 2;
 
   /**
-   * Video ID video data property name.
+   * ID video data property name.
    *
    * @var string
    */
-  public const VIDEO_DATA_VIDEO_ID_PROPERTY_NAME = 'video_id';
+  public const VIDEO_DATA_ID_PROPERTY_NAME = 'id';
 
   /**
    * {@inheritdoc}
@@ -70,7 +70,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    * @param string $name
    *   Name of metadata field to fetch. Can be either
    *   static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME or
-   *   static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME.
+   *   static::VIDEO_DATA_ID_PROPERTY_NAME.
    *
    * @return mixed
    *   If $name is a valid metadata property name, returns the metadata property
@@ -111,7 +111,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   public function getMetadataAttributes() : array {
     return [
       static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME => $this->t('The base embed URL'),
-      static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME => $this->t('The unique video ID'),
+      static::VIDEO_DATA_ID_PROPERTY_NAME => $this->t('The unique video/channel ID'),
     ];
   }
 
@@ -160,17 +160,18 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   }
 
   /**
-   * Validates the given video ID.
+   * Validates the given video/channel ID.
    *
    * @param mixed $videoId
-   *   Video ID (an element from the array returned by tryParseVideoData()).
+   *   An element from the array returned by tryParseVideoData(): either the
+   *   video ID (for recorded videos) or the channel ID (for streams).
    *
    * @return bool
-   *   Returns TRUE if the video ID is of type "string" and is otherwise valid;
-   *   else FALSE.
+   *   Returns TRUE if the ID is of type "string" and is otherwise valid; else
+   *   returns FALSE.
    */
-  public function isVideoIdValid($videoId) : bool {
-    return StringHelpers::isNonEmptyString($videoId);
+  public function isVideoOrChannelIdValid($id) : bool {
+    return StringHelpers::isNonEmptyString($id);
   }
 
   /**
@@ -198,16 +199,17 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *
    * @param string $baseEmbedUrl
    *   Base embed URL (assumed to be valid).
-   * @param string $videoId
-   *   Video ID (assumed to be valid).
+   * @param string $id
+   *   Video (for recorded videos) or channel (for streams) ID (assumed to be
+   *   valid).
    *
    * @return string
    *   Source field value generated from the function arguments.
    */
-  public function prepareVideoData(string $baseEmbedUrl, string $videoId) : string {
+  public function prepareVideoData(string $baseEmbedUrl, string $id) : string {
     return json_encode([
       static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME => $baseEmbedUrl,
-      static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME => $videoId,
+      static::VIDEO_DATA_ID_PROPERTY_NAME => $id,
     ]);
   }
 
@@ -236,8 +238,8 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *   of two items: one with key
    *   static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME containing the base
    *   video embed URL (which is not validated), and another with key
-   *   static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME containing the video ID (which
-   *   is likewise unvalidated).
+   *   static::VIDEO_DATA_ID_PROPERTY_NAME containing the video ID (for a
+   *   recorded video) or channel ID (for a stream)
    *
    * @return int
    *   Returns 0 on success. Otherwise, returns either
@@ -252,7 +254,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
         $parsedData = [];
         return static::VIDEO_DATA_PARSE_ERROR_INVALID_KEYS;
       }
-      if (!array_key_exists(static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME, $parsedData) || !array_key_exists(static::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME, $parsedData)) {
+      if (!array_key_exists(static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME, $parsedData) || !array_key_exists(static::VIDEO_DATA_ID_PROPERTY_NAME, $parsedData)) {
         $parsedData = [];
         return static::VIDEO_DATA_PARSE_ERROR_INVALID_KEYS;
       }

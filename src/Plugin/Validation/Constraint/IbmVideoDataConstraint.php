@@ -28,13 +28,13 @@ class IbmVideoDataConstraint extends Constraint {
   public string $invalidJsonKeySetMessage = 'The JSON provided has an incorrect set of root-level keys.';
 
   /**
+   * Indicates the video/channel ID is invalid.
+   */
+  public string $invalidIdMessage = 'The video/channel ID is invalid.';
+
+  /**
    * Indicates the IBM video data string is not valid JSON.
    */
   public string $invalidJsonMessage = 'The string provided is not valid JSON.';
-
-  /**
-   * Indicates the video ID is invalid.
-   */
-  public string $invalidVideoIdMessage = 'The video ID is invalid.';
 
 }

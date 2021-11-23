@@ -96,13 +96,14 @@ final class IbmVideoUrlHelpers {
   }
 
   /**
-   * Extracts the base embed URL (and poss. video ID) from the given embed URL.
+   * Extracts the base embed URL (and video/chan. ID) from the given embed URL.
    *
    * @param string $embedUrl
    *   Embed URL. Assumed to be valid (i.e., to match static::REGEX_EMBED_URL).
-   * @param string|null $videoId
-   *   (output parameter) The video ID, if it exists; otherwise NULL. Undefined
-   *   if $embedUrl is invalid.
+   * @param string $id
+   *   (output parameter) The video ID, if the embed URL corresponds to a
+   *   recorded video. Alternatively, if the URL corresponds to a stream, this
+   *   should be the channel ID.
    *
    * @return string
    *   Base embed URL: the scheme, query, and fragment is stripped from the
@@ -111,26 +112,30 @@ final class IbmVideoUrlHelpers {
    * @throws \InvalidArgumentException
    *   Thrown in some cases in $embedUrl is invalid.
    */
-  public static function extractBaseEmbedUrlAndVideoId(string $embedUrl, ?string &$videoId) : string {
+  public static function extractBaseEmbedUrlAndId(string $embedUrl, string &$id) : string {
     ThrowHelpers::throwIfEmptyString($embedUrl, 'embedUrl');
     $invalidUrlConditionalThrow = function(bool $shouldThrow) : void {
       if ($shouldThrow) { throw new \InvalidArgumentException('$url is invalid.'); } };
     // Grab everything after the initial "video.ibm.com/embed/".
+    // @todo Make this more efficient (no need to store first part here).
     $parts = explode('video.ibm.com/embed/', $embedUrl, 2);
     $invalidUrlConditionalThrow(count($parts) !== 2);
     $remainder = $parts[1];
     $recordedPathPart = 'recorded/';
     $recordedPathPartLength = 9;
     if (strlen($remainder) > $recordedPathPartLength && substr_compare($remainder, $recordedPathPart, 0, $recordedPathPartLength) === 0) {
-      // If the first part of $remainder is "recorded/", we should be able to
-      // extract a video ID (everything since "recorded/" up to "?").
-      $encodedVideoId = static::getSubstringUpTo($recordedPathPartLength, $remainder, '?');
-      $videoId = urldecode($encodedVideoId);
-      return 'video.ibm.com/embed/recorded/' . $encodedVideoId;
+      // If the first part of $remainder is "recorded/", the video ID should
+      // consist of everything since "recorded/" and up to "?".
+      $encodedId = static::getSubstringUpTo($recordedPathPartLength, $remainder, '?');
+      $id = urldecode($encodedId);
+      return 'video.ibm.com/embed/recorded/' . $encodedId;
     }
     else {
-      $videoId = NULL;
-      return 'video.ibm.com/embed/' . static::getSubstringUpTo(0, $remainder, '?');
+      // Otherwise, the *channel* ID should consist of everything after "embed/"
+      // and up to "?".
+      $encodedId = static::getSubstringUpTo($recordedPathPartLength, $remainder, '?');
+      $id = urldecode($encodedId);
+      return 'video.ibm.com/embed/' . $encodedId;
     }
   }
 

@@ -97,8 +97,8 @@ class IbmVideoFormatter extends FormatterBase {
    * Returns the render array, keyed by delta, for the given field items.
    *
    * Only the first item is rendered, and it is not rendered if it is NULL,
-   * empty, or invalid. It is parsed, if possible, as a JSON string of video
-   * metadata, in accordance with what is defined in
+   * empty, or in some cases if it is invalid. The item is parsed, if possible,
+   * as a JSON string of video metadata, in accordance with what is defined in
    * @see \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo.
    *
    * @param \Drupal\Core\Field\FieldItemListInterface $items
@@ -133,12 +133,6 @@ class IbmVideoFormatter extends FormatterBase {
         goto finish_element_item;
       }
       /** @var string $baseEmbedUrl */
-      $videoId = $videoData[IbmVideo::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME];
-      if (!$this->source->isVideoIdValid($videoId)) {
-        $renderElement[$delta] = [];
-        goto finish_element_item;
-      }
-      /** @var string $videoId */
 
       // Render the item with a template defined by this module. We use the "//"
       // "scheme" when generating the embed URL, to force the embed iFrame
