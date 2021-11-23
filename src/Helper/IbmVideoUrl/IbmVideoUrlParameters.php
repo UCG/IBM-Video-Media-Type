@@ -69,6 +69,11 @@ class IbmVideoUrlParameters {
   private ?int $defaultQuality = NULL;
 
   /**
+   * Whether to show the video player controls.
+   */
+  private bool $displayControls = TRUE;
+
+  /**
    * Initial volume for video player.
    */
   private int $initialVolume = 50;
@@ -112,6 +117,16 @@ class IbmVideoUrlParameters {
    */
   public function getDefaultQuality() : ?int {
     return $this->defaultQuality;
+  }
+
+  /**
+   * Gets the "display controls" flag.
+   *
+   * @return bool
+   *   A value indicating whether the video playback controls should be shown.
+   */
+  public function getDisplayControlsFlag() : bool {
+    return $this->displayControls;
   }
 
   /**
@@ -180,19 +195,21 @@ class IbmVideoUrlParameters {
    *   Thrown if $defaultQuality is not one of the allowed options.
    */
   public function setDefaultQuality(?int $defaultQuality) : IbmVideoUrlParameters {
-    if ($defaultQuality !== NULL) {
-      switch ($defaultQuality) {
-        case static::DEFAULT_QUALITY_LOW:
-        case static::DEFAULT_QUALITY_MEDIUM:
-        case static::DEFAULT_QUALITY_HIGH:
-          break;
-
-        default:
-          throw new \InvalidArgumentException('$defaultQuality is not one of the allowed options.');
-      }
+    if ($defaultQuality !== NULL && !static::isDefaultQualityValidInternal($defaultQuality)) {
+      throw new \InvalidArgumentException('$defaultQualtity is invalid.');
     }
     $this->defaultQuality = $defaultQuality;
     return $this;
+  }
+
+  /**
+   * Sets the "display controls" flag.
+   *
+   * @param bool $displayControls
+   *   A value indicating whether the video playback controls should be shown.
+   */
+  public function setDisplayControlsFlag(bool $displayControls) : void {
+    $this->displayControls = $displayControls;
   }
 
   /**
@@ -207,10 +224,9 @@ class IbmVideoUrlParameters {
    *   Thrown if $initialVolume is not in the correct range.
    */
   public function setInitialVolume(int $initialVolume) : IbmVideoUrlParameters {
-    if ($initialVolume < 0 || $initialVolume > 100) {
-      throw new \InvalidArgumentException('$initialVolume is not in the range from 0-100, inclusive.');
+    if (!static::isInitialVolumeValidInternal($initialVolume)) {
+      throw new \InvalidArgumentException('$initialVolume is invalid.');
     }
-
     $this->initialVolume = $initialVolume;
     return $this;
   }
@@ -266,17 +282,8 @@ class IbmVideoUrlParameters {
    *   Thrown if $wMode is not one of the allowed options.
    */
   public function setWMode(?int $wMode) : IbmVideoUrlParameters {
-    if ($wMode !== NULL) {
-      switch ($wMode) {
-        case static::WMODE_DIRECT:
-        case static::WMODE_OPAQUE:
-        case static::WMODE_TRANSPARENT:
-        case static::WMODE_WINDOW:
-          break;
-
-        default:
-          throw new \InvalidArgumentException('$wMode is not one of the allowed options.');
-      }
+    if ($wMode !== NULL && !static::isWModeValidInternal($wMode)) {
+      throw new \InvalidArgumentException('$wMode is invalid.');
     }
     $this->wMode = $wMode;
     return $this;
@@ -349,14 +356,26 @@ class IbmVideoUrlParameters {
   /**
    * Tells whether the given default quality is valid.
    *
-   * The default quality is valid if it is of type "int" and is one of the
-   * static::DEFAULT_QUALITY_* values.
+   * The default quality is valid if it is either 1) NULL or 2) is of type "int"
+   * and is one of the static::DEFAULT_QUALITY_* values.
    *
    * @param mixed $defaultQuality
    *   Default quality.
    */
-  public static function validateDefaultQuality($defaultQuality) : bool {
-    return (is_int($defaultQuality) && static::validateDefaultQualityInternal($defaultQuality)) ? TRUE : FALSE;
+  public static function isDefaultQualityValid($defaultQuality) : bool {
+    return ($defaultQuality === NULL || (is_int($defaultQuality) && static::isDefaultQualityValidInternal($defaultQuality))) ? TRUE : FALSE;
+  }
+
+  /**
+   * Tells whether the given "display controls" flag is valid.
+   *
+   * The flag is valid if it is of type "bool."
+   *
+   * @param mixed $displayControls
+   *   Display controls flag.
+   */
+  public static function isDisplayControlsFlagValid($displayControls) : bool {
+    return is_bool($displayControls);
   }
 
   /**
@@ -368,8 +387,8 @@ class IbmVideoUrlParameters {
    * @param mixed $initialVolume
    *   Initial volume.
    */
-  public static function validateInitialVolume($initialVolume) : bool {
-    return (is_int($initialVolume) && static::validateInitialVolumeInternal($initialVolume)) ? TRUE : FALSE;
+  public static function isInitialVolumeValid($initialVolume) : bool {
+    return (is_int($initialVolume) && static::isInitialVolumeValidInternal($initialVolume)) ? TRUE : FALSE;
   }
 
   /**
@@ -380,7 +399,7 @@ class IbmVideoUrlParameters {
    * @param mixed $showTitle
    *   Show title flag.
    */
-  public static function validateShowTitleFlag($showTitle) : bool {
+  public static function isShowTitleFlagValid($showTitle) : bool {
     return is_bool($showTitle);
   }
 
@@ -392,7 +411,7 @@ class IbmVideoUrlParameters {
    * @param mixed $useAutoplay
    *   Use autoplay flag.
    */
-  public static function validateUseAutoplayFlag($useAutoplay) : bool {
+  public static function isUseAutoplayFlagValid($useAutoplay) : bool {
     return is_bool($useAutoplay);
   }
 
@@ -404,21 +423,21 @@ class IbmVideoUrlParameters {
    * @param mixed $useHtml5Ui
    *   Use HTML5 UI flag.
    */
-  public static function validateUseHtml5UiFlag($useHtml5Ui) : bool {
+  public static function isUseHtml5UiFlagValid($useHtml5Ui) : bool {
     return is_bool($useHtml5Ui);
   }
 
   /**
    * Tells whether the given WMode is valid.
    *
-   * The WMode is valid if it is of type "int" and is one of the static::WMODE_*
-   * values.
+   * The WMode is valid if it is either 1) NULL or 2) is of type "int" and is
+   * one of the static::WMODE_* values.
    *
    * @param mixed $wMode
    *   WMode.
    */
-  public static function validateWMode($wMode) : bool {
-    return (is_int($wMode) && static::validateWModeInternal($wMode)) ? TRUE : FALSE;
+  public static function isWModeValid($wMode) : bool {
+    return ($wMode === NULL || (is_int($wMode) && static::isWModeValidInternal($wMode))) ? TRUE : FALSE;
   }
 
   /**
@@ -430,7 +449,7 @@ class IbmVideoUrlParameters {
    * @param int $defaultQuality
    *   Default quality.
    */
-  private static function validateDefaultQualityInternal(int $defaultQuality) : bool {
+  private static function isDefaultQualityValidInternal(int $defaultQuality) : bool {
     switch ($defaultQuality) {
       case static::DEFAULT_QUALITY_LOW:
       case static::DEFAULT_QUALITY_MEDIUM:
@@ -443,15 +462,14 @@ class IbmVideoUrlParameters {
   }
 
   /**
-   * Tells whether the given default quality is valid.
+   * Tells whether the given initial volume is valid.
    *
-   * The default quality is valid if it is one of the static::DEFAULT_QUALITY_*
-   * values.
+   * The initial volume is valid if it is in the range 0-100, inclusive.
    *
-   * @param mixed $defaultQuality
-   *   Default quality.
+   * @param mixed $initialVolume
+   *   Initial volume.
    */
-  private static function validateInitialVolumeInternal(int $initialVolume) : bool {
+  private static function isInitialVolumeValidInternal(int $initialVolume) : bool {
     return ($initialVolume >= 0 && $initialVolume <= 100) ? TRUE : FALSE;
   }
 
@@ -463,7 +481,7 @@ class IbmVideoUrlParameters {
    * @param int $wMode
    *   WMode.
    */
-  public static function validateWModeInternal(int $wMode) : bool {
+  private static function isWModeValidInternal(int $wMode) : bool {
     switch ($wMode) {
       case static::WMODE_DIRECT:
       case static::WMODE_OPAQUE:
