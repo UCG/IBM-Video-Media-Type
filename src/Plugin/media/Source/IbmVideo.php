@@ -13,7 +13,6 @@ use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceFieldConstraintsInterface;
 use Drupal\media\MediaTypeInterface;
 use Ranine\Helper\StringHelpers;
-use Ranine\Helper\ThrowHelpers;
 
 /**
  * Defines the media type plugin for embedded IBM videos or streams.
@@ -33,7 +32,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *
    * @var string
    */
-  public const VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME = 'baseEmbedUrl';
+  public const VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME = 'base_embed_url';
 
   /**
    * Flag for a "JSON malformed" video data parse error.
@@ -54,7 +53,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *
    * @var string
    */
-  public const VIDEO_DATA_VIDEO_ID_PROPERTY_NAME = 'videoId';
+  public const VIDEO_DATA_VIDEO_ID_PROPERTY_NAME = 'video_id';
 
   /**
    * {@inheritdoc}

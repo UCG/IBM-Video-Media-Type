@@ -41,38 +41,38 @@ class IbmVideoFormatter extends FormatterBase {
    */
   public function settingsForm(array $form, FormStateInterface $form_state) : array {
     return [
-      'useAutoplay' => [
+      'use_autoplay' => [
         '#type' => 'checkbox',
         '#title' => $this->t('Use Autoplay'),
-        '#default_value' => $this->prepareSetting('useAutoplay'),
+        '#default_value' => $this->prepareSetting('use_autoplay'),
       ],
-      'useHtml5Ui' => [
+      'use_html5_ui' => [
         '#type' => 'checkbox',
         '#title' => $this->t('Use HTML5 UI'),
-        '#default_value' => $this->prepareSetting('useHtml5Ui'),
+        '#default_value' => $this->prepareSetting('use_html5_ui'),
       ],
-      'displayControls' => [
+      'display_controls' => [
         '#type' => 'checkbox',
         '#title' => $this->t('Display Playback Controls'),
-        '#default_value' => $this->prepareSetting('displayControls'),
+        '#default_value' => $this->prepareSetting('display_controls'),
       ],
-      'showTitle' => [
+      'show_title' => [
         '#type' => 'checkbox',
         '#title' => $this->t('Show Video Title'),
-        '#default_value' => $this->prepareSetting('showTitle'),
+        '#default_value' => $this->prepareSetting('show_title'),
       ],
-      'initialVolume' => [
+      'initial_volume' => [
         '#type' => 'range',
         '#title' => $this->t('Initial Volume'),
-        '#default_value' => $this->prepareSetting('initialVolume'),
+        '#default_value' => $this->prepareSetting('initial_volume'),
         '#min' => 1,
         '#max' => 100,
         '#step' => 1,
       ],
-      'wMode' => [
+      'w_mode' => [
         '#type' => 'list',
         '#title' => $this->t('WMode'),
-        '#default_value' => $this->prepareSetting('wMode'),
+        '#default_value' => $this->prepareSetting('w_mode'),
         '#options' => [
           IbmVideoUrlParameters::WMODE_DIRECT => 'Direct',
           IbmVideoUrlParameters::WMODE_OPAQUE => 'Opaque',
@@ -80,10 +80,10 @@ class IbmVideoFormatter extends FormatterBase {
           IbmVideoUrlParameters::WMODE_WINDOW => 'Window',
         ],
       ],
-      'defaultQuality' => [
+      'default_quality' => [
         '#type' => 'list',
         '#title' => $this->t('Default Quality'),
-        '#default_value' => $this->prepareSetting('defaultQuality'),
+        '#default_value' => $this->prepareSetting('default_quality'),
         '#options' => [
           IbmVideoUrlParameters::DEFAULT_QUALITY_LOW => 'Low',
           IbmVideoUrlParameters::DEFAULT_QUALITY_MEDIUM => 'Medium',
@@ -174,13 +174,13 @@ finish_element_item:
     $nonNullIntCasting = fn ($x) => $x === NULL ? NULL : (int) $x;
     try {
       return (new IbmVideoUrlParameters())
-        ->setDefaultQuality($nonNullIntCasting($this->getSetting('defaultQuality')))
-        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('displayControls')))
-        ->setDefaultQuality($nonNullIntCasting($this->getSetting('initialVolume')))
-        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('showTitle')))
-        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('useAutoplay')))
-        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('useHtml5Ui')))
-        ->setDefaultQuality($nonNullIntCasting($this->getSetting('wMode')));
+        ->setDefaultQuality($nonNullIntCasting($this->getSetting('default_quality')))
+        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('display_controls')))
+        ->setDefaultQuality($nonNullIntCasting($this->getSetting('initial_volume')))
+        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('show_title')))
+        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('use_autoplay')))
+        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('use_html5_ui')))
+        ->setDefaultQuality($nonNullIntCasting($this->getSetting('w_mode')));
     }
     catch (\InvalidArgumentException $e) {
       throw new \RuntimeException('A video formatter setting is invalid.', 0, $e);
@@ -216,37 +216,37 @@ finish_element_item:
     $nonNullBoolCasting = fn ($x) => $x === NULL ? NULL : (bool) $x;
     $nonNullIntCasting = fn ($x) => $x === NULL ? NULL : (int) $x;
     switch ($value) {
-      case 'defaultQuality':
+      case 'default_quality':
         $preparedValue = $nonNullIntCasting($value);
         $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isDefaultQualityValid($preparedValue));
         return $preparedValue;
 
-      case 'displayControls':
+      case 'display_controls':
         $preparedValue = $nonNullBoolCasting($value);
         $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isDisplayControlsFlagValid($value));
         return $preparedValue;
 
-      case 'initialVolume':
+      case 'initial_volume':
         $preparedValue = $nonNullIntCasting($value);
         $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isInitialVolumeValid($value));
         return $preparedValue;
 
-      case 'showTitle':
+      case 'show_title':
         $preparedValue = $nonNullBoolCasting($value);
         $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isShowTitleFlagValid($value));
         return $preparedValue;
 
-      case 'useAutoplay':
+      case 'use_autoplay':
         $preparedValue = $nonNullBoolCasting($value);
         $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isUseAutoplayFlagValid($value));
         return $preparedValue;
 
-      case 'useHtml5Ui':
+      case 'use_html5_ui':
         $preparedValue = $nonNullBoolCasting($value);
         $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isUseHtml5UiFlagValid($value));
         return $preparedValue;
       
-      case 'wMode':
+      case 'w_mode':
         $preparedValue = $nonNullIntCasting($value);
         $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isWModeValid($value));
         return $preparedValue;
@@ -327,13 +327,13 @@ finish_element_item:
     if (static::$defaultSettings === NULL) {
       $defaultParameterSet = new IbmVideoUrlParameters();
       static::$defaultSettings = [
-        'defaultQuality' => $defaultParameterSet->getDefaultQuality(),
-        'displayControls' => $defaultParameterSet->getDisplayControlsFlag(),
-        'initialVolume' => $defaultParameterSet->getInitialVolume(),
-        'showTitle' => $defaultParameterSet->getShowTitleFlag(),
-        'useAutoplay' => $defaultParameterSet->getUseAutoplayFlag(),
-        'useHtml5Ui' => $defaultParameterSet->getUseHtml5UiFlag(),
-        'wMode' => $defaultParameterSet->getWMode(),
+        'default_quality' => $defaultParameterSet->getDefaultQuality(),
+        'display_controls' => $defaultParameterSet->getDisplayControlsFlag(),
+        'initial_volume' => $defaultParameterSet->getInitialVolume(),
+        'show_title' => $defaultParameterSet->getShowTitleFlag(),
+        'use_autoplay' => $defaultParameterSet->getUseAutoplayFlag(),
+        'use_html5_ui' => $defaultParameterSet->getUseHtml5UiFlag(),
+        'w_mode' => $defaultParameterSet->getWMode(),
       ];
     }
     return static::$defaultSettings;
