@@ -6,6 +6,7 @@ namespace Drupal\ibm_video_media_type\Plugin\media\Source;
 
 use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\field\FieldConfigInterface;
 use Drupal\ibm_video_media_type\Helper\IbmVideoUrl\IbmVideoUrlHelpers;
 use Drupal\media\MediaInterface;
@@ -35,6 +36,13 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   public const VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME = 'base_embed_url';
 
   /**
+   * Video thumbnail URI property name.
+   *
+   * @var string
+   */
+  public const VIDEO_DATA_LOCAL_THUMBNAIL_URI_PROPERTY_NAME = 'thumbnail_uri';
+
+  /**
    * Flag for a "JSON malformed" video data parse error.
    *
    * @var int
@@ -58,8 +66,35 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   /**
    * {@inheritdoc}
    */
+  public function buildConfigurationForm(array $form, FormStateInterface $form_state) : array {
+    // See the source for
+    // \Drupal\media\Plugin\media\Source\OEmbed::buildConfigurationForm(),
+    // whence some of this was taken.
+    $form = parent::buildConfigurationForm($form, $form_state);
+    $form['thumbnails_directory'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Thumbnails location'),
+      '#default_value' => $this->configuration['thumbnails_directory'],
+      '#description' => $this->t('Directory of local video thumbnail cache.'),
+      '#required' => TRUE,
+    ];
+    return $form;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function createSourceField(MediaTypeInterface $type) : FieldConfigInterface {
     return parent::createSourceField($type)->set('label', 'IBM Video Data');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function defaultConfiguration() {
+    return [
+      'thumbnails_directory' => 'public://ibm_video_thumbnails',
+    ] + parent::defaultConfiguration();
   }
 
   /**
@@ -102,7 +137,13 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       return NULL;
     }
 
-    return array_key_exists($name, $videoData) ? $videoData[$name] : NULL;
+    if ($name === static::VIDEO_DATA_LOCAL_THUMBNAIL_URI_PROPERTY_NAME) {
+      $uri = $this->prepareLocalThumbnailUri($videoData);
+      return $uri === NULL ? parent::getMetadata($media, $name) : $uri;
+    }
+    else {
+      return array_key_exists($name, $videoData) ? $videoData[$name] : NULL;
+    }
   }
 
   /**
@@ -112,6 +153,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     return [
       static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME => $this->t('The base embed URL'),
       static::VIDEO_DATA_ID_PROPERTY_NAME => $this->t('The unique video/channel ID'),
+      static::VIDEO_DATA_LOCAL_THUMBNAIL_URI_PROPERTY_NAME => $this->t('The local thumbnail URI'),
     ];
   }
 
@@ -265,6 +307,28 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     }
 
     return 0;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateConfigurationForm(array &$form, FormStateInterface $form_state) {
+    // See the source for
+    // \Drupal\media\Plugin\media\Source\OEmbed::validateConfigurationForm(),
+    // from where some of this was taken.
+    $thumbnailsDirectory = (string) $form_state->getValue('thumbnails_directory');
+    if ($thumbnailsDirectory === '') {
+      $form_state->setErrorByName('thumbnails_directory', $this->t('The local thumbnails directory cannot be empty.'));
+    }
+    else {
+      /** @var \Drupal\Core\StreamWrapper\StreamWrapperManagerInterface $stream_wrapper_manager */
+      $streamWrapperManager = \Drupal::service('stream_wrapper_manager');
+      if (!$streamWrapperManager->isValidUri($thumbnailsDirectory)) {
+        $form_state->setErrorByName('thumbnails_directory', $this->t('"@directory" is not a valid thumbnails directory.', [
+          '@directory' => $thumbnailsDirectory,
+        ]));
+      }
+    }
   }
 
 }
