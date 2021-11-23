@@ -4,7 +4,6 @@ declare (strict_types = 1);
 
 namespace Drupal\ibm_video_media_type\Plugin\Field\FieldFormatter;
 
-use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
@@ -14,7 +13,6 @@ use Drupal\ibm_video_media_type\Helper\IbmVideoUrl\IbmVideoUrlHelpers;
 use Drupal\ibm_video_media_type\Helper\IbmVideoUrl\IbmVideoUrlParameters;
 use Drupal\ibm_video_media_type\Helper\MediaSourceFieldHelpers;
 use Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo;
-use Ranine\Iteration\ExtendableIterable;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -27,6 +25,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * )
  */
 class IbmVideoFormatter extends FormatterBase {
+
+  /**
+   * Default settings, or NULL if the defaults are not yet defined.
+   */
+  private static ?array $defaultSettings = NULL;
 
   /**
    * Video source associated with this formatter.
@@ -124,13 +127,13 @@ class IbmVideoFormatter extends FormatterBase {
         $renderElement[$delta] = [];
         goto finish_element_item;
       }
-      $baseEmbedUrl = $videoData['baseEmbedUrl'];
+      $baseEmbedUrl = $videoData[IbmVideo::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME];
       if (!$this->source->isBaseEmbedUrlValid($baseEmbedUrl)) {
         $renderElement[$delta] = [];
         goto finish_element_item;
       }
       /** @var string $baseEmbedUrl */
-      $videoId = $videoData['channelVideoId'];
+      $videoId = $videoData[IbmVideo::VIDEO_DATA_VIDEO_ID_PROPERTY_NAME];
       if (!$this->source->isVideoIdValid($videoId)) {
         $renderElement[$delta] = [];
         goto finish_element_item;
@@ -142,7 +145,7 @@ class IbmVideoFormatter extends FormatterBase {
       // to be served from the same protocol as is the main website.
       $renderElement[$delta] = [
         '#theme' => 'ibm_video_player',
-        '#videoUrl' => IbmVideoUrlHelpers::assembleEmbedUrl($baseEmbedUrl, '//', $this->getUrlParameters()),
+        '#videoUrl' => IbmVideoUrlHelpers::assembleEmbedUrl($baseEmbedUrl, '//', $this->getEmbedUrlParameters()),
       ];
 
 finish_element_item:
@@ -155,137 +158,101 @@ finish_element_item:
   }
 
   /**
-   * Generates and returns an embed URL for the given IBM video.
+   * Computes the set of embed URL parameters from the settings.
    *
-   * Uses the current settings to set the video player properties.
+   * Also validates the settings associated with the parameters as the set of
+   * parameters is built.
    *
-   * @param string $channelId
-   *   Video channel ID.
-   * @param string $channelVideoId
-   *   The ID of the video within the channel (not the unique video ID).
-   *
-   * @return string
-   *   Embed URL. This URL is protocol-independent (starts with "//").
+   * @return \Drupal\ibm_video_media_type\Helper\IbmVideoUrl\IbmVideoUrlParameters
+   *   Video URL parameters.
    *
    * @throws \RuntimeException
-   *   Thrown if an invalid formatter setting is encountered when trying to
-   *   build the URL.
+   *   Thrown if one or more of the relevant settings is invalid.
    */
-  private function generateVideoUrl(string $channelId, string $channelVideoId) : string {
-    $queryString = UrlHelper::buildQuery(ExtendableIterable::from(static::PLAYER_SETTINGS_AND_DEFAULTS)
-      ->map(fn(string $setting) => $this->prepareSetting($setting))
-      ->filter(fn($setting, $value) => $value !== NULL)
-      ->map(function (string $setting, $value) : string {
-        // Validate and cast the setting value to an appropriate form. See
-        // https://support.video.ibm.com/hc/en-us/articles/207851927-Using-URL-Parameters-and-Embed-API-for-Custom-Players.
-        switch ($setting) {
-          case 'useHtml5Ui':
-            return $value ? '1' : '0';
-
-          case 'wMode':
-            switch ($value) {
-              case static::SETTING_WMODE_DIRECT:
-                return 'direct';
-
-              case static::SETTING_WMODE_OPAQUE:
-                return 'opaque';
-
-              case static::SETTING_WMODE_TRANSPARENT:
-                return 'transparent';
-
-              case static::SETTING_WMODE_WINDOW:
-                return 'window';
-
-              default:
-                throw new \RuntimeException('Unexpected wMode setting encountered.');
-            }
-
-          case 'defaultQuality':
-            switch ($value) {
-              case static::SETTING_DEFAULT_QUALITY_LOW:
-                return 'low';
-
-              case static::SETTING_DEFAULT_QUALITY_MEDIUM:
-                return 'medium';
-
-              case static::SETTING_DEFAULT_QUALITY_HIGH:
-                return 'high';
-
-              default:
-                throw new \RuntimeException('Unexpected defaultQuality setting encountered.');
-            }
-
-          case 'initialVolume':
-            if (!static::isInitialVolumeInRange($value)) {
-              throw new \RuntimeException('Unexpected initialVolume setting encountered.');
-            }
-            return (string) $value;
-
-          case 'useAutoplay':
-          case 'useHtml5Ui':
-          case 'displayControls':
-          case 'showTitle':
-            return $value ? 'true' : 'false';
-
-          default:
-            throw new \RuntimeException('Unexpected setting encountered.');
-        }
-      })->toArray());
-    // Use a protocol-neutral protocol prefix ("//").
-    $baseUrl = IbmVideoUrlHelpers::assemblePermalinkUrl($channelId, $channelVideoId, '//');
-
-    return $queryString === '' ? $baseUrl : ($baseUrl . '?' . $queryString);
+  public function getEmbedUrlParameters() : IbmVideoUrlParameters {
+    $nonNullBoolCasting = fn ($x) => $x === NULL ? NULL : (bool) $x;
+    $nonNullIntCasting = fn ($x) => $x === NULL ? NULL : (int) $x;
+    try {
+      return (new IbmVideoUrlParameters())
+        ->setDefaultQuality($nonNullIntCasting($this->getSetting('defaultQuality')))
+        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('displayControls')))
+        ->setDefaultQuality($nonNullIntCasting($this->getSetting('initialVolume')))
+        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('showTitle')))
+        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('useAutoplay')))
+        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('useHtml5Ui')))
+        ->setDefaultQuality($nonNullIntCasting($this->getSetting('wMode')));
+    }
+    catch (\InvalidArgumentException $e) {
+      throw new \RuntimeException('A video formatter setting is invalid.', 0, $e);
+    }
   }
 
   /**
-   * Prepares a given setting for use.
+   * Prepares a given setting for use by casting and validating it.
    *
    * @param string $settingName
-   *   Setting name.
+   *   Setting name -- must be one of the settings defined by this class (not
+   *   by a superclass).
    *
    * @return mixed
-   *   Prepared setting. If the setting isn't set, or is considered
-   *   "non-nullable" but is set to NULL, the default value for the setting is
-   *   is returned. The returned setting is also casted to the primitive type
-   *   corresponding to the setting.
+   *   Prepared setting. If the setting isn't set, the default value for the
+   *   setting is returned. If the setting is invalid, an exception is thrown.
+   *   Otherwise, the setting is casted to its canonical primitive type and
+   *   returned.
    *
    * @throws \InvalidArgumentException
-   *   Thrown if $settingName is not a valid setting name.
+   *   Thrown if $settingName is not a valid setting name (associated with this
+   *   class, and not a superclass).
+   * @throws \RuntimeException
+   *   Thrown if the setting value corresponding to $settingName is invalid.
    */
   private function prepareSetting(string $settingName) {
     $value = $this->getSetting($settingName);
-    if ($value === NULL) {
-      // If the setting isn't nullable, look up the default setting (if we can).
-      switch ($settingName) {
-        case 'wMode':
-        case 'defaultQuality':
-          // These are the nullable settings.
-          return NULL;
-
-        default:
-          if (!array_key_exists($settingName, static::PLAYER_SETTINGS_AND_DEFAULTS)) {
-            throw new \InvalidArgumentException('$settingName is not valid.');
-          }
-          return static::PLAYER_SETTINGS_AND_DEFAULTS[$settingName];
+    $invalidSettingConditionalThrowing = function (bool $shouldThrow) use ($settingName) {
+      if ($shouldThrow) {
+        throw new \RuntimeException('Invalid "' . $settingName . '" value.');
       }
-    }
-    else {
-      // Cast the setting to an appropriate type.
-      switch ($settingName) {
-        case 'wMode':
-        case 'defaultQuality':
-        case 'initialVolume':
-          return (int) $value;
+    };
+    $nonNullBoolCasting = fn ($x) => $x === NULL ? NULL : (bool) $x;
+    $nonNullIntCasting = fn ($x) => $x === NULL ? NULL : (int) $x;
+    switch ($value) {
+      case 'defaultQuality':
+        $preparedValue = $nonNullIntCasting($value);
+        $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isDefaultQualityValid($preparedValue));
+        return $preparedValue;
 
-        case 'useAutoplay':
-        case 'useHtml5Ui':
-        case 'displayControls':
-        case 'showTitle':
-          return (bool) $value;
+      case 'displayControls':
+        $preparedValue = $nonNullBoolCasting($value);
+        $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isDisplayControlsFlagValid($value));
+        return $preparedValue;
 
-        default:
-          throw new \RuntimeException('Unexpected setting name.');
-      }
+      case 'initialVolume':
+        $preparedValue = $nonNullIntCasting($value);
+        $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isInitialVolumeValid($value));
+        return $preparedValue;
+
+      case 'showTitle':
+        $preparedValue = $nonNullBoolCasting($value);
+        $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isShowTitleFlagValid($value));
+        return $preparedValue;
+
+      case 'useAutoplay':
+        $preparedValue = $nonNullBoolCasting($value);
+        $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isUseAutoplayFlagValid($value));
+        return $preparedValue;
+
+      case 'useHtml5Ui':
+        $preparedValue = $nonNullBoolCasting($value);
+        $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isUseHtml5UiFlagValid($value));
+        return $preparedValue;
+      
+      case 'wMode':
+        $preparedValue = $nonNullIntCasting($value);
+        $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isWModeValid($value));
+        return $preparedValue;
+
+      default:
+        throw new \InvalidArgumentException('$settingName is not one of the settings defined by this class.');
     }
   }
 
@@ -340,7 +307,7 @@ finish_element_item:
    * {@inheritdoc}
    */
   public static function defaultSettings() : array {
-    return static::PLAYER_SETTINGS_AND_DEFAULTS + parent::defaultSettings();
+    return static::getUnmergedDefaultSettings() + parent::defaultSettings();
   }
 
   /**
@@ -351,13 +318,25 @@ finish_element_item:
   }
 
   /**
-   * Tells whether given initial volume value is valid (btwn 0-100, inclusive).
+   * Gets the set of default settings corresponding to this class.
    *
-   * @param int $initialVolume
-   *   Initial volume value to check.
+   * This function does not merge the default settings with those from the
+   * parent class.
    */
-  private static function isInitialVolumeInRange(int $initialVolume) : bool {
-    return ($initialVolume >= 0 && $initialVolume <= 100) ? TRUE : FALSE;
+  private static function getUnmergedDefaultSettings() : array {
+    if (static::$defaultSettings === NULL) {
+      $defaultParameterSet = new IbmVideoUrlParameters();
+      static::$defaultSettings = [
+        'defaultQuality' => $defaultParameterSet->getDefaultQuality(),
+        'displayControls' => $defaultParameterSet->getDisplayControlsFlag(),
+        'initialVolume' => $defaultParameterSet->getInitialVolume(),
+        'showTitle' => $defaultParameterSet->getShowTitleFlag(),
+        'useAutoplay' => $defaultParameterSet->getUseAutoplayFlag(),
+        'useHtml5Ui' => $defaultParameterSet->getUseHtml5UiFlag(),
+        'wMode' => $defaultParameterSet->getWMode(),
+      ];
+    }
+    return static::$defaultSettings;
   }
 
 }
