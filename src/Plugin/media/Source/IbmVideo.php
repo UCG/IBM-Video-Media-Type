@@ -7,6 +7,7 @@ namespace Drupal\ibm_video_media_type\Plugin\media\Source;
 use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\StreamWrapper\StreamWrapperManagerInterface;
 use Drupal\field\FieldConfigInterface;
 use Drupal\ibm_video_media_type\Helper\IbmVideoUrl\IbmVideoUrlHelpers;
 use Drupal\media\MediaInterface;
@@ -14,6 +15,7 @@ use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceFieldConstraintsInterface;
 use Drupal\media\MediaTypeInterface;
 use Ranine\Helper\StringHelpers;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Defines the media type plugin for embedded IBM videos or streams.
@@ -62,6 +64,11 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    * @var string
    */
   public const VIDEO_DATA_ID_PROPERTY_NAME = 'id';
+
+  /**
+   * Stream wrapper manager.
+   */
+  private StreamWrapperManagerInterface $streamWrapperManager;
 
   /**
    * {@inheritdoc}
@@ -321,14 +328,35 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       $form_state->setErrorByName('thumbnails_directory', $this->t('The local thumbnails directory cannot be empty.'));
     }
     else {
-      /** @var \Drupal\Core\StreamWrapper\StreamWrapperManagerInterface $stream_wrapper_manager */
-      $streamWrapperManager = \Drupal::service('stream_wrapper_manager');
-      if (!$streamWrapperManager->isValidUri($thumbnailsDirectory)) {
+      if (!$this->streamWrapperManager->isValidUri($thumbnailsDirectory)) {
         $form_state->setErrorByName('thumbnails_directory', $this->t('"@directory" is not a valid thumbnails directory.', [
           '@directory' => $thumbnailsDirectory,
         ]));
       }
     }
+  }
+
+  /**
+   * Creates and returns a new IBM video source.
+   *
+   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
+   *   Service container.
+   * @param array $configuration
+   *   Configuration array containing information about the plugin instance.
+   * @param string $plugin_id
+   *   Plugin ID for the plugin instance.
+   * @param string $plugin_definition
+   *   Plugin implementation definition.
+   *
+   * @return static
+   */
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) : IbmVideo {
+    // We call parent::create() instead of invoking our own constructor, because
+    // Drupal plugin constructors are technically not part of the public API.
+    /** @var \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo */
+    $source = parent::create($container, $configuration, $plugin_id, $plugin_definition);
+    $source->streamWrapperManager = $container->get('stream_wrapper_manager');
+    return $source;
   }
 
 }

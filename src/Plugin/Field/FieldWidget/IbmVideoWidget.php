@@ -135,7 +135,7 @@ EOS
   /**
    * Creates and returns a new IBM video widget.
    *
-   * @param ContainerInterface $container
+   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
    *   Service container.
    * @param array $configuration
    *   Configuration array containing information about the plugin instance.

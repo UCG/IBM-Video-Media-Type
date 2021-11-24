@@ -253,7 +253,7 @@ finish_element_item:
   /**
    * Creates and returns a new IBM video formatter.
    *
-   * @param ContainerInterface $container
+   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
    *   Service container.
    * @param array $configuration
    *   Configuration array containing information about the plugin instance.
