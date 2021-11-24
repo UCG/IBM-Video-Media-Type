@@ -14,7 +14,6 @@ use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceFieldConstraintsInterface;
 use Drupal\media\MediaTypeInterface;
-use Ranine\Helper\StringHelpers;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -31,6 +30,43 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInterface {
 
   /**
+   * Code indicating the thumbnail has been successfully downloaded.
+   *
+   * If this status is active, the thumbnail should be present in the local
+   * thumbnail cache folder.
+   *
+   * @var int
+   */
+  public const THUMBNAIL_STATUS_RETRIEVED = 1;
+
+  /**
+   * Code indicating no attempt has yet been made to download the thumbnail.
+   *
+   * @var int
+   */
+  public const THUMBNAIL_STATUS_NO_RETRIEVAL = 2;
+
+  /**
+   * Code indicating a failed (no retry) thumbnail download attempt was made.
+   *
+   * If this status is active, an attempt was made to download the thumbnail,
+   * but it failed, and another attempt should not be made.
+   *
+   * @var int
+   */
+  public const THUMBNAIL_STATUS_FAILED_NO_RETRY = 3;
+
+  /**
+   * Code indicating a failed (retryable) thumbnail download attempt was made.
+   *
+   * If this status is active, an attempt was made to download the thumbnail,
+   * and it failed, but another attempt can later be made.
+   *
+   * @var int
+   */
+  public const THUMBNAIL_STATUS_FAILED_RETRY = 4;
+
+  /**
    * Video base embed URL video data property name.
    *
    * @var string
@@ -38,11 +74,11 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   public const VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME = 'base_embed_url';
 
   /**
-   * Video thumbnail URI property name.
+   * Video thumbnail status property name.
    *
    * @var string
    */
-  public const VIDEO_DATA_LOCAL_THUMBNAIL_URI_PROPERTY_NAME = 'thumbnail_uri';
+  public const VIDEO_DATA_THUMBNAIL_STATUS_PROPERTY_NAME = 'thumbnail_status';
 
   /**
    * Flag for a "JSON malformed" video data parse error.
@@ -57,13 +93,6 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    * @var int
    */
   public const VIDEO_DATA_PARSE_ERROR_INVALID_KEYS = 2;
-
-  /**
-   * ID video data property name.
-   *
-   * @var string
-   */
-  public const VIDEO_DATA_ID_PROPERTY_NAME = 'id';
 
   /**
    * Stream wrapper manager.
@@ -110,9 +139,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    * @param \Drupal\media\MediaInterface $media
    *   Media entity.
    * @param string $name
-   *   Name of metadata field to fetch. Can be either
-   *   static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME or
-   *   static::VIDEO_DATA_ID_PROPERTY_NAME.
+   *   Name of metadata field to fetch.
    *
    * @return mixed
    *   If $name is a valid metadata property name, returns the metadata property
@@ -144,8 +171,8 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       return NULL;
     }
 
-    if ($name === static::VIDEO_DATA_LOCAL_THUMBNAIL_URI_PROPERTY_NAME) {
-      $uri = $this->prepareLocalThumbnailUri($videoData);
+    if ($name === 'thumbnail_uri') {
+      $uri = $this->getLocalThumbnailUri($videoData);
       return $uri === NULL ? parent::getMetadata($media, $name) : $uri;
     }
     else {
@@ -159,8 +186,8 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   public function getMetadataAttributes() : array {
     return [
       static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME => $this->t('The base embed URL'),
-      static::VIDEO_DATA_ID_PROPERTY_NAME => $this->t('The unique video/channel ID'),
-      static::VIDEO_DATA_LOCAL_THUMBNAIL_URI_PROPERTY_NAME => $this->t('The local thumbnail URI'),
+      static::VIDEO_DATA_THUMBNAIL_STATUS_PROPERTY_NAME => $this->t('The status of the thumbnail (successfully retrieved, not retrieved but set to be retrieved lazily later, etc.)'),
+      'thumbnail_uri' => $this->t('The local thumbnail URI'),
     ];
   }
 
@@ -209,21 +236,6 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   }
 
   /**
-   * Validates the given video/channel ID.
-   *
-   * @param mixed $videoId
-   *   An element from the array returned by tryParseVideoData(): either the
-   *   video ID (for recorded videos) or the channel ID (for streams).
-   *
-   * @return bool
-   *   Returns TRUE if the ID is of type "string" and is otherwise valid; else
-   *   returns FALSE.
-   */
-  public function isVideoOrChannelIdValid($id) : bool {
-    return StringHelpers::isNonEmptyString($id);
-  }
-
-  /**
    * {@inheritdoc}
    */
   public function prepareFormDisplay(MediaTypeInterface $type, EntityFormDisplayInterface $display) : void {
@@ -248,17 +260,16 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *
    * @param string $baseEmbedUrl
    *   Base embed URL (assumed to be valid).
-   * @param string $id
-   *   Video (for recorded videos) or channel (for streams) ID (assumed to be
-   *   valid).
+   * @param int $thumbnailStatus.
+   *   Thumbnail status -- one of the static::THUMBNAIL_STATUS_* values.
    *
    * @return string
    *   Source field value generated from the function arguments.
    */
-  public function prepareVideoData(string $baseEmbedUrl, string $id) : string {
+  public function prepareVideoData(string $baseEmbedUrl, int $thumbnailStatus) : string {
     return json_encode([
       static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME => $baseEmbedUrl,
-      static::VIDEO_DATA_ID_PROPERTY_NAME => $id,
+      static::VIDEO_DATA_THUMBNAIL_STATUS_PROPERTY_NAME => $thumbnailStatus,
     ]);
   }
 
@@ -284,11 +295,11 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *   Data from the first item of the source field.
    * @param array<string, mixed> $parsedData
    *   (output parameter) If parsing was successful, this is an array consisting
-   *   of two items: one with key
+   *   of two items: a "string" with key
    *   static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME containing the base
-   *   video embed URL (which is not validated), and another with key
-   *   static::VIDEO_DATA_ID_PROPERTY_NAME containing the video ID (for a
-   *   recorded video) or channel ID (for a stream)
+   *   video embed URL (which is not validated), and an "int" with key
+   *   static::VIDEO_DATA_THUMBNAIL_STATUS_PROPERTY_NAME containing the
+   *   thumbnail status (one of the static::THUMBNAIL_STATUS_* constants).
    *
    * @return int
    *   Returns 0 on success. Otherwise, returns either
@@ -303,7 +314,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
         $parsedData = [];
         return static::VIDEO_DATA_PARSE_ERROR_INVALID_KEYS;
       }
-      if (!array_key_exists(static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME, $parsedData) || !array_key_exists(static::VIDEO_DATA_ID_PROPERTY_NAME, $parsedData)) {
+      if (!array_key_exists(static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME, $parsedData) || !array_key_exists(static::VIDEO_DATA_THUMBNAIL_STATUS_PROPERTY_NAME, $parsedData)) {
         $parsedData = [];
         return static::VIDEO_DATA_PARSE_ERROR_INVALID_KEYS;
       }
@@ -334,6 +345,21 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
         ]));
       }
     }
+  }
+
+  /**
+   * Retrieves, if possible, the local thumbnail URI.
+   *
+   * If the thumbnail has not been downloaded but should be, this function
+   * attempts to download that thumbnail using the video or channel ID contained
+   * in the video embed URL passed in. @todo Finish.
+   *
+   * @return string|null
+   *   If the thumbnail has been downloaded, this is the local URI of the
+   *   thumbnail
+   */
+  private function getLocalThumbnailUri(string $videoEmbedUrl) : ?string {
+
   }
 
   /**
