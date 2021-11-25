@@ -4,9 +4,17 @@
  * @file
  * Hook implementations for the IBM video media type module.
  *
- * @todo Figure out how to handle local thumbnail URI storage (whether to fetch
- * each time, validation, etc.)
- * @todo Finish implementing thumbnail support.
+ * @todo Implement thumbnail stuff:
+ *   1) Add "thumbnail entity reference ID" "field" to source field JSON in
+ *   IbmVideo.
+ *   2) Add code in IbmVideo to grab local thumbnail URI using this field (the
+ *   thumbnail URI is generated from a hash of the ID/base embed URL), and
+ *   download a thumbnail if necessary to this URI.
+ *   3) Adjust the method for generating the source field value to generate a
+ *   thumbnail entity reference ID if one has not been generated.
+ *   4) Adjust widget/formatter to work with above changes.
+ *   5) Adjust constraint validator to work with this.
+ *   6) Remove unnecessary methods.
  * @todo Review.
  * @todo Test.
  */

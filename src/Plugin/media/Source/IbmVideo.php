@@ -348,21 +348,6 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   }
 
   /**
-   * Retrieves, if possible, the local thumbnail URI.
-   *
-   * If the thumbnail has not been downloaded but should be, this function
-   * attempts to download that thumbnail using the video or channel ID contained
-   * in the video embed URL passed in. @todo Finish.
-   *
-   * @return string|null
-   *   If the thumbnail has been downloaded, this is the local URI of the
-   *   thumbnail
-   */
-  private function getLocalThumbnailUri(string $videoEmbedUrl) : ?string {
-
-  }
-
-  /**
    * Creates and returns a new IBM video source.
    *
    * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
