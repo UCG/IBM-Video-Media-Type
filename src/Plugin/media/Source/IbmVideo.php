@@ -348,23 +348,30 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   /**
    * Prepares, if possible, the local thumbnail URI for the given parameters.
    *
-   * If the thumbnail corresponding to the given embed URL and thumbnail
-   * reference ID has not yet been locally cached, an attempt is made to
-   * download the thumbnail, and the URI of the downloaded thumbnail is returned
-   * (if the remote thumbnail could not be fetched, NULL is returned). If the
-   * thumbnail has been cached, the local URI is returned.
+   * If the thumbnail corresponding to the function arguments has not yet been
+   * locally cached, an attempt is made to download the thumbnail, and the URI
+   * of the downloaded thumbnail is returned if possible (if the remote
+   * thumbnail could not be fetched, NULL is returned). If the thumbnail has
+   * been cached, the local URI is returned.
    *
+   * @param string $videoOrChannelId
+   *   Video or channel ID.
+   * @param bool $isRecorded
+   *   Whether the video is a recorded video (TRUE) or a stream (FALSE).
    * @param string $thumbnailReferenceId
    *   Thumbnail reference ID.
-   * @param string $baseEmbedUrl
-   *   Base embed URL.
    *
    * @return string|null
    *   The local thumbnail URL, or NULL if it could not be obtained or if there
    *   is no thumbnail.
    */
-  private function prepareLocalThumbnailUri(string $thumbnailReferenceId, string $baseEmbedUrl) : ?string {
-    // First, we extract the ID (channel or video) from the base embed URL.
+  private function prepareLocalThumbnailUri(string $videoOrChannelId, bool $isRecorded, string $thumbnailReferenceId) : ?string {
+    // The thumbnail file name (sans extension) consists of the lowercase
+    // hexadecimal representation of the hash of "$videoOrChannelId.[0/1 for
+    // recorded video / stream].$thumbnailReferenceId". This way, the file name
+    // should be unique for a given video/media entity combination (because the
+    // thumbnail reference IDs of different media entities should be different).
+    
   }
 
   /**
