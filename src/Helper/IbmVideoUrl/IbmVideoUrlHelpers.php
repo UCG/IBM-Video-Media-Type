@@ -14,16 +14,6 @@ use Ranine\Helper\ThrowHelpers;
 final class IbmVideoUrlHelpers {
 
   /**
-   * Regex for a base IBM video embed URL.
-   *
-   * This should be used to match an embed URL with neither query, fragment nor
-   * scheme.
-   */
-  public const REGEX_BASE_EMBED_URL =
-    '(?i)video.ibm.com/embed/(?:recorded/)?'
-    . '(?:' . self::REGEX_URL_PATH_SEGMENT_CHARACTER_LOWERCASE . ')+';
-
-  /**
    * Regex for an IBM video embed URL.
    *
    * The scheme must be "https://", "http://", "//", or "". Note that some
@@ -37,6 +27,20 @@ final class IbmVideoUrlHelpers {
     . '(?:' . self::REGEX_URL_PATH_SEGMENT_CHARACTER_LOWERCASE
     . ')+(?:\\?' . self::REGEX_URL_QUERY_LOWERCASE
     . ')?(?:#' . self::REGEX_URL_FRAGMENT_LOWERCASE . ')?';
+  
+  /**
+   * Base URL (no scheme, query, or ID) for recorded video.
+   *
+   * @var string
+   */
+  private const EMBED_URL_BASE_RECORDED = 'video.ibm.com/recorded/';
+
+  /**
+   * Base URL (no scheme, query, or ID) for streaming video.
+   *
+   * @var string
+   */
+  private const EMBED_URL_BASE_STREAM = 'video.ibm.com/';
 
   /**
    * The regex for a valid lowercase URL path segment character
@@ -80,39 +84,43 @@ final class IbmVideoUrlHelpers {
   /**
    * Returns the embed URL associated with the arguments provided.
    *
-   * @param string $baseEmbedUrl
-   *   Base embed URL (no scheme, query, or fragment).
+   * @param string $id
+   *   Video ID (for recorded videos) or channel ID (for streams).
+   * @param bool $isRecorded
+   *   TRUE if the video is recorded; FALSE if it is a stream.
    * @param string $scheme
    *   Scheme. Can be empty.
    * @param IbmVideoUrlParameters $parameters
    *   Video player parameters to include in query string of returned URL.
    *
    * @throws \InvalidArgumentException
-   *   Thrown if $baseEmbedUrl is empty.
+   *   Thrown if $id is empty.
    */
-  public static function assembleEmbedUrl(string $baseEmbedUrl, string $scheme, IbmVideoUrlParameters $parameters) : string {
-    ThrowHelpers::throwIfEmptyString($baseEmbedUrl, 'baseEmbedUrl');
-    return ($scheme . $baseEmbedUrl . $parameters->toEmbedUrlQueryString());
+  public static function assembleEmbedUrl(string $id, bool $isRecorded, string $scheme, IbmVideoUrlParameters $parameters) : string {
+    ThrowHelpers::throwIfEmptyString($id, 'id');
+    $query = $parameters->toEmbedUrlQueryString();
+    $baseUrl = $isRecorded ? static::EMBED_URL_BASE_RECORDED : static::EMBED_URL_BASE_STREAM;
+    return ($scheme . $baseUrl . rawurlencode($id) . '?' . $query);
   }
 
   /**
-   * Extracts the base embed URL (and video/chan. ID) from the given embed URL.
+   * Extracts the video/channel ID and recorded/streamed info from an embed URL.
    *
    * @param string $embedUrl
-   *   Embed URL. Assumed to be valid (i.e., to match static::REGEX_EMBED_URL).
+   *   Embed URL. Assumed to be valid.
    * @param string $id
-   *   (output parameter) The video ID, if the embed URL corresponds to a
-   *   recorded video. Alternatively, if the URL corresponds to a stream, this
-   *   should be the channel ID.
-   *
-   * @return string
-   *   Base embed URL: the scheme, query, and fragment is stripped from the
-   *   input embed URL. Undefined if $embedUrl is not valid.
+   *   (output parameter) The video ID (if the embed URL corresponds to a
+   *   recorded video) or channel ID (if the URL corresponds to a stream).
+   *   Undefined if $embedUrl is invalid.
+   * @param bool $isRecorded
+   *   (output parameter) TRUE if the embed URL corresponds to a recorded video;
+   *   FALSE if the URL corresponds to a stream.
    *
    * @throws \InvalidArgumentException
-   *   Thrown in some cases in $embedUrl is invalid.
+   *   Thrown if $embedUrl is empty, and in some other cases if $embedUrl is
+   *   invalid.
    */
-  public static function extractBaseEmbedUrlAndId(string $embedUrl, string &$id) : string {
+  public static function parseEmbedUrl(string $embedUrl, string &$id, bool &$isRecorded) : void {
     ThrowHelpers::throwIfEmptyString($embedUrl, 'embedUrl');
     $invalidUrlConditionalThrow = function(bool $shouldThrow) : void {
       if ($shouldThrow) { throw new \InvalidArgumentException('$url is invalid.'); } };
@@ -124,33 +132,28 @@ final class IbmVideoUrlHelpers {
     $recordedPathPart = 'recorded/';
     $recordedPathPartLength = 9;
     if (strlen($remainder) > $recordedPathPartLength && substr_compare($remainder, $recordedPathPart, 0, $recordedPathPartLength) === 0) {
+      $isRecorded = TRUE;
       // If the first part of $remainder is "recorded/", the video ID should
       // consist of everything since "recorded/" and up to "?".
       $encodedId = static::getSubstringUpTo($recordedPathPartLength, $remainder, '?');
-      $id = urldecode($encodedId);
-      return 'video.ibm.com/embed/recorded/' . $encodedId;
     }
     else {
+      $isRecorded = FALSE;
       // Otherwise, the *channel* ID should consist of everything after "embed/"
       // and up to "?".
       $encodedId = static::getSubstringUpTo($recordedPathPartLength, $remainder, '?');
-      $id = urldecode($encodedId);
-      return 'video.ibm.com/embed/' . $encodedId;
     }
+    $id = urldecode($encodedId);
   }
 
   /**
-   * Tells whether the given base embed URL is valid.
+   * Tells whether the given video or channel ID is valid (non-empty).
    *
-   * @param string $baseEmbedUrl
-   *   Base embed URL.
+   * @param string $id
+   *   Video or channel ID.
    */
-  public static function isBaseEmbedUrlValid(string $baseEmbedUrl) : bool {
-    // Use our regex to validate the URL. Use bracket delimiters to avoid having
-    // to escape extra characters in the regex. Also, the regex stored in the
-    // constant is unanchored, so we anchor it here. See also the source for
-    // \Drupal\Core\Render\Element\FormElement::validatePattern().
-    return preg_match('{^(?:' . static::REGEX_BASE_EMBED_URL . ')$}', $baseEmbedUrl);
+  public static function isVideoOrChannelIdValid(string $id) : bool {
+    return $id === '' ? FALSE : TRUE;
   }
 
   /**

@@ -2,15 +2,15 @@
 
 /**
  * @file
- * Hook implementations for the IBM video media type module.
+ * Hook implementations for the IBM Video Media Type module.
  *
- * @todo Implement thumbnail stuff:
- *   1) Add code in IbmVideo to grab local thumbnail URI using this field (the
- *   thumbnail URI is generated from a hash of the ID/base embed URL), and
- *   download a thumbnail if necessary to this URI.
- *   2) Adjust widget/formatter to work with above changes.
- *   3) Adjust constraint validator to work with this.
- *   4) Remove unnecessary methods.
+ * @todo Implement thumbnail stuff in IbmVideo:
+ *   - Add code to grab local thumbnail URI (the thumbnail URI is generated
+ *   from a hash of the ID/base embed URL), and download a thumbnail if
+ *   necessary to this URI.
+ * @todo Adjust widget to work with recent changes.
+ * @todo Adjust formatter '' '' '' '' ''.
+ * @todo Adjust constraint validation '' '' '' '' ''.
  * @todo Review.
  * @todo Test.
  */
