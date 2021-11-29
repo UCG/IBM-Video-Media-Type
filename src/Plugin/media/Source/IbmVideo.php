@@ -14,6 +14,8 @@ use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceFieldConstraintsInterface;
 use Drupal\media\MediaTypeInterface;
+use Ranine\Helper\StringHelpers;
+use Ranine\Helper\ThrowHelpers;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -74,11 +76,11 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   public const VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME = 'base_embed_url';
 
   /**
-   * Video thumbnail status property name.
+   * Video thumbnail reference ID property name.
    *
    * @var string
    */
-  public const VIDEO_DATA_THUMBNAIL_STATUS_PROPERTY_NAME = 'thumbnail_status';
+  public const VIDEO_DATA_THUMBNAIL_REFERENCE_ID_PROPERTY_NAME = 'thumbnail_reference_id';
 
   /**
    * Flag for a "JSON malformed" video data parse error.
@@ -186,7 +188,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   public function getMetadataAttributes() : array {
     return [
       static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME => $this->t('The base embed URL'),
-      static::VIDEO_DATA_THUMBNAIL_STATUS_PROPERTY_NAME => $this->t('The status of the thumbnail (successfully retrieved, not retrieved but set to be retrieved lazily later, etc.)'),
+      static::VIDEO_DATA_THUMBNAIL_REFERENCE_ID_PROPERTY_NAME => $this->t('An ID used to help retrieve the local thumbnail URI'),
       'thumbnail_uri' => $this->t('The local thumbnail URI'),
     ];
   }
@@ -236,6 +238,21 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   }
 
   /**
+   * Validates the given thumbnail reference ID.
+   *
+   * @param mixed $thumbnailReferenceId
+   *   Thumbnail reference ID (an element from the array returned by
+   *   tryParseVideoData()).
+   *
+   * @return bool
+   *   Returns TRUE if the thumbnail reference ID is a non-empty string; else
+   *   FALSE.
+   */
+  public function isThumbnailReferenceIdValid($thumbnailReferenceId) : bool {
+    return StringHelpers::isNonEmptyString($thumbnailReferenceId);
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function prepareFormDisplay(MediaTypeInterface $type, EntityFormDisplayInterface $display) : void {
@@ -260,16 +277,28 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *
    * @param string $baseEmbedUrl
    *   Base embed URL (assumed to be valid).
-   * @param int $thumbnailStatus.
-   *   Thumbnail status -- one of the static::THUMBNAIL_STATUS_* values.
+   * @param string|null $currentThumbnailReferenceId
+   *   Current thumbnail reference ID, or NULL if none exists.
    *
    * @return string
    *   Source field value generated from the function arguments.
+   *
+   * @throws \InvalidArgumentException
+   *   Thrown if $baseEmbedUrl or $currentThumbnailReferenceId is empty.
    */
-  public function prepareVideoData(string $baseEmbedUrl, int $thumbnailStatus) : string {
+  public function prepareVideoData(string $baseEmbedUrl, ?string $currentThumbnailReferenceId) : string {
+    ThrowHelpers::throwIfEmptyString($baseEmbedUrl, 'baseEmbedUrl');
+    // Generate a random thumbnail reference ID if none exists.
+    if ($currentThumbnailReferenceId === NULL) {
+      $currentThumbnailReferenceId = static::generateThumbnailReferenceId();
+    }
+    else {
+      ThrowHelpers::throwIfEmptyString($currentThumbnailReferenceId, 'currentThubmanilReferenceId');
+    }
+
     return json_encode([
       static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME => $baseEmbedUrl,
-      static::VIDEO_DATA_THUMBNAIL_STATUS_PROPERTY_NAME => $thumbnailStatus,
+      static::VIDEO_DATA_THUMBNAIL_REFERENCE_ID_PROPERTY_NAME => $currentThumbnailReferenceId,
     ]);
   }
 
@@ -295,11 +324,11 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *   Data from the first item of the source field.
    * @param array<string, mixed> $parsedData
    *   (output parameter) If parsing was successful, this is an array consisting
-   *   of two items: a "string" with key
+   *   of two items: an item with key
    *   static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME containing the base
-   *   video embed URL (which is not validated), and an "int" with key
-   *   static::VIDEO_DATA_THUMBNAIL_STATUS_PROPERTY_NAME containing the
-   *   thumbnail status (one of the static::THUMBNAIL_STATUS_* constants).
+   *   video embed URL (which is not validated), and an item with key
+   *   static::VIDEO_DATA_THUMBNAIL_REFERENCE_ID_PROPERTY_NAME containing the
+   *   thumbnail reference ID (also not validated).
    *
    * @return int
    *   Returns 0 on success. Otherwise, returns either
@@ -314,7 +343,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
         $parsedData = [];
         return static::VIDEO_DATA_PARSE_ERROR_INVALID_KEYS;
       }
-      if (!array_key_exists(static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME, $parsedData) || !array_key_exists(static::VIDEO_DATA_THUMBNAIL_STATUS_PROPERTY_NAME, $parsedData)) {
+      if (!array_key_exists(static::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME, $parsedData) || !array_key_exists(static::VIDEO_DATA_THUMBNAIL_REFERENCE_ID_PROPERTY_NAME, $parsedData)) {
         $parsedData = [];
         return static::VIDEO_DATA_PARSE_ERROR_INVALID_KEYS;
       }
@@ -368,6 +397,17 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     $source = parent::create($container, $configuration, $plugin_id, $plugin_definition);
     $source->streamWrapperManager = $container->get('stream_wrapper_manager');
     return $source;
+  }
+
+  /**
+   * Generates a random thumbnail reference ID.
+   *
+   * @return string
+   *   New thumbnail reference ID (base-64 encoding of eight cryptographically
+   *   random bytes).
+   */
+  public static function generateThumbnailReferenceId() : string {
+    return base64_encode(random_bytes(8));
   }
 
 }
