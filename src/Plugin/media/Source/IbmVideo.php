@@ -4,8 +4,13 @@ declare (strict_types = 1);
 
 namespace Drupal\ibm_video_media_type\Plugin\media\Source;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Field\FieldTypePluginManagerInterface;
+use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StreamWrapper\StreamWrapperManagerInterface;
 use Drupal\field\FieldConfigInterface;
@@ -66,9 +71,78 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   public const VIDEO_DATA_PARSE_ERROR_INVALID_KEYS = 2;
 
   /**
+   * The separator between parts of a local thumbnail filename.
+   *
+   * @var string
+   */
+  private const LOCAL_THUMBNAIL_FILENAME_PART_SEPARATOR = '_';
+
+  /**
+   * The prefix for local thumbnail filenames.
+   *
+   * @var string
+   */
+  private const LOCAL_THUMBNAIL_FILENAME_PREFIX = 'thumbnail';
+
+  /**
+   * The "recorded video" identifier for use in a local thumbnail filename.
+   *
+   * @var string
+   */
+  private const LOCAL_THUMBNAIL_FILENAME_RECORDED_IDENTIFIER = 'recorded';
+
+  /**
+   * The "streamed video" identifier for use in a local thumbnail filename.
+   *
+   * @var string
+   */
+  private const LOCAL_THUMBNAIL_FILENAME_STREAM_IDENTIFIER = 'stream';
+
+  /**
+   * File system.
+   */
+  protected FileSystemInterface $fileSystem;
+
+  /**
    * Stream wrapper manager.
    */
   private StreamWrapperManagerInterface $streamWrapperManager;
+
+  /**
+   * Creates a new IbmVideo plugin instance.
+   *
+   * @param array $configuration
+   *   Configuration array containing information about the plugin instance.
+   * @param string $pluginId
+   *   Plugin ID for the plugin instance.
+   * @param mixed $pluginDefinition
+   *   Plugin implementation definition.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
+   *   Entity type manager.
+   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entityFieldManager
+   *   Entity field manager.
+   * @param \Drupal\Core\Field\FieldTypePluginManagerInterface $fieldTypePluginManager
+   *   Field type plugin manager.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
+   *   Configuration factory.
+   * @param \Drupal\Core\File\FileSystemInterface $fileSystem
+   *   File system.
+   * @param \Drupal\Core\StreamWrapper\StreamWrapperManagerInterface $streamWrapperManager
+   *   Stream wrapper manager.
+   */
+  public function __construct(array $configuration,
+    string $pluginId,
+    $pluginDefinition,
+    EntityTypeManagerInterface $entityTypeManager,
+    EntityFieldManagerInterface $entityFieldManager,
+    FieldTypePluginManagerInterface $fieldTypePluginManager,
+    ConfigFactoryInterface $configFactory,
+    FileSystemInterface $fileSystem,
+    StreamWrapperManagerInterface $streamWrapperManager) {
+    parent::__construct($configuration, $pluginId, $pluginDefinition, $entityTypeManager, $entityFieldManager, $fieldTypePluginManager, $configFactory);
+    $this->fileSystem = $fileSystem;
+    $this->streamWrapperManager = $streamWrapperManager;
+  }
 
   /**
    * {@inheritdoc}
@@ -78,10 +152,12 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     // \Drupal\media\Plugin\media\Source\OEmbed::buildConfigurationForm(),
     // whence some of this was taken.
     $form = parent::buildConfigurationForm($form, $form_state);
+    $configuration = $this->getConfiguration();
+    $thumbnailsDirectory = isset($configuration['thumbnails_directory']) ? $configuration['thumbnails_directory'] : NULL;
     $form['thumbnails_directory'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Thumbnails location'),
-      '#default_value' => $this->configuration['thumbnails_directory'],
+      '#default_value' => $thumbnailsDirectory,
       '#description' => $this->t('Directory of local video thumbnail cache.'),
       '#required' => TRUE,
     ];
@@ -166,12 +242,12 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   public function getSourceFieldValue(MediaInterface $media) : ?string {
     // See code in parent method.
 
-    $sourceField = $this->configuration['source_field'];
-    if (empty($sourceField)) {
+    $sourceField = $this->getConfiguration();
+    if (empty($configuration['source_field'])) {
       throw new \RuntimeException('Source field for IBM video media source is not defined.');
     }
 
-    $items = $media->get($sourceField);
+    $items = $media->get($configuration['source_field']);
     if ($items->isEmpty()) {
       return NULL;
     }
@@ -366,11 +442,16 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *   is no thumbnail.
    */
   private function prepareLocalThumbnailUri(string $videoOrChannelId, bool $isRecorded, string $thumbnailReferenceId) : ?string {
-    // The thumbnail file name (sans extension) consists of the lowercase
-    // hexadecimal representation of the hash of "$videoOrChannelId.[0/1 for
-    // recorded video / stream].$thumbnailReferenceId". This way, the file name
-    // should be unique for a given video/media entity combination (because the
-    // thumbnail reference IDs of different media entities should be different).
+    // The thumbnail file name (sans extension) is chosen to be unique for a
+    // given video/media entity combination (because the thumbnail reference IDs
+    // of different media entities should be different).
+    $thumbnailFileNameBase = static::LOCAL_THUMBNAIL_FILENAME_PREFIX
+      . static::LOCAL_THUMBNAIL_FILENAME_PART_SEPARATOR
+      . bin2hex(sha1($thumbnailReferenceId))
+      . static::LOCAL_THUMBNAIL_FILENAME_PART_SEPARATOR
+      . ($isRecorded ? static::LOCAL_THUMBNAIL_FILENAME_RECORDED_IDENTIFIER : static::LOCAL_THUMBNAIL_FILENAME_STREAM_IDENTIFIER)
+      . static::LOCAL_THUMBNAIL_FILENAME_PART_SEPARATOR
+      . bin2hex(sha1($videoOrChannelId));
     
   }
 
@@ -389,12 +470,15 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    * @return static
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) : IbmVideo {
-    // We call parent::create() instead of invoking our own constructor, because
-    // Drupal plugin constructors are technically not part of the public API.
-    /** @var \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo */
-    $source = parent::create($container, $configuration, $plugin_id, $plugin_definition);
-    $source->streamWrapperManager = $container->get('stream_wrapper_manager');
-    return $source;
+    return new static($configuration,
+      $plugin_id,
+      $plugin_definition,
+      $container->get('entity_type.manager'),
+      $container->get('entity_field.manager'),
+      $container->get('plugin.manager.field.field_type'),
+      $container->get('config.factory'),
+      $container->get('file_system'),
+      $container->get('stream_wrapper_manager'));
   }
 
   /**
