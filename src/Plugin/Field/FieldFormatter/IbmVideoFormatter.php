@@ -5,6 +5,7 @@ declare (strict_types = 1);
 namespace Drupal\ibm_video_media_type\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
@@ -35,6 +36,59 @@ class IbmVideoFormatter extends FormatterBase {
    * Video source associated with this formatter.
    */
   private IbmVideo $source;
+
+  /**
+   * Creates a new IBM video formatter.
+   *
+   * @param string $pluginId
+   *   Formatter plugin ID.
+   * @param mixed $pluginDefinition
+   *   Plugin implementation definition.
+   * @param \Drupal\Core\Field\FieldDefinitionInterface $fieldDefinition
+   *   Definition of the field with which the formatter is associated.
+   * @param array $settings
+   *   Formatter settings.
+   * @param string $label
+   *   Formatter label display setting.
+   * @param string $viewMode
+   *   View mode.
+   * @param array $thirdPartySettings
+   *   Third party settings.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
+   *   Entity type manager.
+   *
+   * @throws \InvalidArgumentException
+   *   Thrown if the field definition does not have a target bundle, or does not
+   *   have a target entity type ID of "media", or does not have a media source
+   *   of type \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo.
+   */
+  public function __construct(string $pluginId,
+    $pluginDefinition,
+    FieldDefinitionInterface $fieldDefinition,
+    array $settings,
+    string $label,
+    string $viewMode,
+    array $thirdPartySettings,
+    EntityTypeManagerInterface $entityTypeManager) {
+    parent::__construct($pluginId, $pluginDefinition, $fieldDefinition, $settings, $label, $viewMode, $thirdPartySettings);
+
+    $bundle = $fieldDefinition->getTargetBundle();
+    if (!is_string($bundle)) {
+      throw new \InvalidArgumentException('Cannot create an IBM video formatter defined for a field type without a target media bundle.');
+    }
+
+    if ($fieldDefinition->getTargetEntityTypeId() !== 'media') {
+      throw new \InvalidArgumentException('Cannot create an IBM video formatter defined for a field type with a target entity type that is not "media".');
+    }
+
+    /** @var \Drupal\media\MediaTypeInterface */
+    $mediaType = $entityTypeManager->getStorage('media_type')->load($bundle);
+    $source = $mediaType->getSource();
+    if (!($source instanceof IbmVideo)) {
+      throw new \InvalidArgumentException('Cannot create an IBM video formatter defined for a field type with a media source that is not of type \\Drupal\\ibm_video_media_type\\Plugin\\media\\Source\\IbmVideo.');
+    }
+    $this->source = $source;
+  }
 
   /**
    * {@inheritdoc}
@@ -263,38 +317,16 @@ finish_element_item:
    *   Plugin implementation definition.
    *
    * @return static
-   *
-   * @throws \InvalidArgumentException
-   *   Thrown if the field definition does not have a target bundle, or does not
-   *   have a target entity type ID of "media", or does not have a media source
-   *   of type \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo.
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) : IbmVideoFormatter {
-    // We call parent::create() instead of invoking our own constructor, because
-    // Drupal plugin constructors are technically not part of the public API.
-    /** @var \Drupal\ibm_video_media_type\Plugin\Field\FieldFormatter\IbmVideoFormatter */
-    $formatter = parent::create($container, $configuration, $plugin_id, $plugin_definition);
-
-    $bundle = $formatter->fieldDefinition->getTargetBundle();
-    if (!is_string($bundle)) {
-      throw new \InvalidArgumentException('Cannot create an IBM video formatter defined for a field type without a target media bundle.');
-    }
-
-    if ($formatter->fieldDefinition->getTargetEntityTypeId() !== 'media') {
-      throw new \InvalidArgumentException('Cannot create an IBM video formatter defined for a field type with a target entity type that is not "media".');
-    }
-
-    /** @var \Drupal\Core\Entity\EntityTypeManagerInterface */
-    $entityTypeManager = $container->get('entity_type.manager');
-    /** @var \Drupal\media\MediaTypeInterface */
-    $mediaType = $entityTypeManager->getStorage('media_type')->load($bundle);
-    $source = $mediaType->getSource();
-    if (!($source instanceof IbmVideo)) {
-      throw new \InvalidArgumentException('Cannot create an IBM video formatter defined for a field type with a media source that is not of type \\Drupal\\ibm_video_media_type\\Plugin\\media\\Source\\IbmVideo.');
-    }
-    $formatter->source = $source;
-
-    return $formatter;
+    return new static($plugin_id,
+      $plugin_definition,
+      $configuration['field_definition'],
+      $configuration['settings'],
+      $configuration['label'],
+      $configuration['view_mode'],
+      $configuration['third_party_settings'],
+      $container->get('entity_type.manager'));
   }
 
   /**

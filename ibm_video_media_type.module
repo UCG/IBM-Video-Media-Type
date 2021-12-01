@@ -4,7 +4,6 @@
  * @file
  * Hook implementations for the IBM Video Media Type module.
  *
- * @todo Fix other plugin construction.
  * @todo Implement thumbnail stuff in IbmVideo:
  *   - Add code to grab local thumbnail URI (the thumbnail URI is generated
  *   from a hash of the ID/base embed URL), and download a thumbnail if

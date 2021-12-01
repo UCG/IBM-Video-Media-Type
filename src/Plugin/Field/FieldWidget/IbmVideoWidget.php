@@ -4,6 +4,7 @@ declare (strict_types = 1);
 
 namespace Drupal\ibm_video_media_type\Plugin\Field\FieldWidget;
 
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\WidgetBase;
@@ -28,6 +29,53 @@ class IbmVideoWidget extends WidgetBase {
    * Video source associated with this widget.
    */
   private IbmVideo $source;
+
+  /**
+   * Creates a new IBM video widget.
+   *
+   * @param string $pluginId
+   *   Formatter plugin ID.
+   * @param mixed $pluginDefinition
+   *   Plugin implementation definition.
+   * @param \Drupal\Core\Field\FieldDefinitionInterface $fieldDefinition
+   *   Definition of the field with which the formatter is associated.
+   * @param array $settings
+   *   Formatter settings.
+   * @param array $thirdPartySettings
+   *   Third party settings.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
+   *   Entity type manager.
+   *
+   * @throws \InvalidArgumentException
+   *   Thrown if the field definition does not have a target bundle, or does not
+   *   have a target entity type ID of "media", or does not have a media source
+   *   of type \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo.
+   */
+  public function __construct(string $pluginId,
+    $pluginDefinition,
+    FieldDefinitionInterface $fieldDefinition,
+    array $settings,
+    array $thirdPartySettings,
+    EntityTypeManagerInterface $entityTypeManager) {
+    parent::__construct($pluginId, $pluginDefinition, $fieldDefinition, $settings, $thirdPartySettings);
+
+    $bundle = $fieldDefinition->getTargetBundle();
+    if (!is_string($bundle)) {
+      throw new \InvalidArgumentException('Cannot create an IBM video formatter defined for a field type without a target media bundle.');
+    }
+
+    if ($fieldDefinition->getTargetEntityTypeId() !== 'media') {
+      throw new \InvalidArgumentException('Cannot create an IBM video formatter defined for a field type with a target entity type that is not "media".');
+    }
+
+    /** @var \Drupal\media\MediaTypeInterface */
+    $mediaType = $entityTypeManager->getStorage('media_type')->load($bundle);
+    $source = $mediaType->getSource();
+    if (!($source instanceof IbmVideo)) {
+      throw new \InvalidArgumentException('Cannot create an IBM video formatter defined for a field type with a media source that is not of type \\Drupal\\ibm_video_media_type\\Plugin\\media\\Source\\IbmVideo.');
+    }
+    $this->source = $source;
+  }
 
   /**
    * Gets the form element used for setting item $delta of $items.
@@ -145,38 +193,14 @@ EOS
    *   Plugin implementation definition.
    *
    * @return static
-   *
-   * @throws \InvalidArgumentException
-   *   Thrown if the field definition does not have a target bundle, or does not
-   *   have a target entity type ID of "media", or does not have a media source
-   *   of type \Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo.
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) : IbmVideoWidget {
-    // We call parent::create() instead of invoking our own constructor, because
-    // Drupal plugin constructors are technically not part of the public API.
-    /** @var \Drupal\ibm_video_media_type\Plugin\Field\FieldWidget\IbmVideoWidget */
-    $widget = parent::create($container, $configuration, $plugin_id, $plugin_definition);
-
-    $bundle = $widget->fieldDefinition->getTargetBundle();
-    if (!is_string($bundle)) {
-      throw new \InvalidArgumentException('Cannot create an IBM video widget defined for a field type without a target media bundle.');
-    }
-
-    if ($widget->fieldDefinition->getTargetEntityTypeId() !== 'media') {
-      throw new \InvalidArgumentException('Cannot create an IBM video widget defined for a field type with a target entity type that is not "media".');
-    }
-
-    /** @var \Drupal\Core\Entity\EntityTypeManagerInterface */
-    $entityTypeManager = $container->get('entity_type.manager');
-    /** @var \Drupal\media\MediaTypeInterface */
-    $mediaType = $entityTypeManager->getStorage('media_type')->load($bundle);
-    $source = $mediaType->getSource();
-    if (!($source instanceof IbmVideo)) {
-      throw new \InvalidArgumentException('Cannot create an IBM video widget defined for a field type with a media source that is not of type \\Drupal\\ibm_video_media_type\\Plugin\\media\\Source\\IbmVideo.');
-    }
-    $widget->source = $source;
-
-    return $widget;
+    return new static($plugin_id,
+      $plugin_definition,
+      $configuration['field_definition'],
+      $configuration['settings'],
+      $configuration['third_party_settings'],
+      $container->get('entity_type.manager'));
   }
 
   /**
