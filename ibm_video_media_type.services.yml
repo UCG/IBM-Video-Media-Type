@@ -1,0 +1,4 @@
+services:
+  ibm_video_media_type.ibm_video_api_mediator:
+    class: Drupal\ibm_video_media_type\IbmVideoApiMediator
+    arguments: ['@http_client']

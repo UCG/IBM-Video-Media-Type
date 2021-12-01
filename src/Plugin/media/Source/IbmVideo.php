@@ -14,13 +14,21 @@ use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StreamWrapper\StreamWrapperManagerInterface;
 use Drupal\field\FieldConfigInterface;
+use Drupal\ibm_video_media_type\Exception\HttpTransferException;
+use Drupal\ibm_video_media_type\Exception\IbmVideoApiBadResponseException;
+use Drupal\ibm_video_media_type\IbmVideoApiMediator;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceFieldConstraintsInterface;
 use Drupal\media\MediaTypeInterface;
+use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\TransferException;
+use GuzzleHttp\RequestOptions;
+use Ranine\Exception\InvalidOperationException;
 use Ranine\Helper\StringHelpers;
 use Ranine\Helper\ThrowHelpers;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\Mime\MimeTypes;
 
 /**
  * Defines the media type plugin for embedded IBM videos or streams.
@@ -71,6 +79,11 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   public const VIDEO_DATA_PARSE_ERROR_INVALID_KEYS = 2;
 
   /**
+   * Default local thumbnail extension, if one could not be determined.
+   */
+  private const LOCAL_THUMBNAIL_DEFAULT_EXTENSION = 'unknown';
+
+  /**
    * The separator between parts of a local thumbnail filename.
    *
    * @var string
@@ -99,9 +112,19 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   private const LOCAL_THUMBNAIL_FILENAME_STREAM_IDENTIFIER = 'stream';
 
   /**
+   * IBM video API mediator.
+   */
+  private IbmVideoApiMediator $apiMediator;
+
+  /**
    * File system.
    */
-  protected FileSystemInterface $fileSystem;
+  private FileSystemInterface $fileSystem;
+
+  /**
+   * HTTP client.
+   */
+  private ClientInterface $httpClient;
 
   /**
    * Stream wrapper manager.
@@ -129,6 +152,10 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *   File system.
    * @param \Drupal\Core\StreamWrapper\StreamWrapperManagerInterface $streamWrapperManager
    *   Stream wrapper manager.
+   * @param \GuzzleHttp\ClientInterface
+   *   HTTP client.
+   * @param \Drupal\ibm_video_media_type\IbmVideoApiMediator $apiMediator
+   *   IBM video API mediator.
    */
   public function __construct(array $configuration,
     string $pluginId,
@@ -138,9 +165,13 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     FieldTypePluginManagerInterface $fieldTypePluginManager,
     ConfigFactoryInterface $configFactory,
     FileSystemInterface $fileSystem,
-    StreamWrapperManagerInterface $streamWrapperManager) {
+    StreamWrapperManagerInterface $streamWrapperManager,
+    ClientInterface $httpClient,
+    IbmVideoApiMediator $apiMediator) {
     parent::__construct($configuration, $pluginId, $pluginDefinition, $entityTypeManager, $entityFieldManager, $fieldTypePluginManager, $configFactory);
+    $this->apiMediator = $apiMediator;
     $this->fileSystem = $fileSystem;
+    $this->httpClient  = $httpClient;
     $this->streamWrapperManager = $streamWrapperManager;
   }
 
@@ -440,19 +471,150 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    * @return string|null
    *   The local thumbnail URL, or NULL if it could not be obtained or if there
    *   is no thumbnail.
+   *
+   * @throws \Drupal\Core\File\Exception\FileException
+   *   Thrown if an error occurs when attempting to save the local thumbnail.
+   * @throws \Ranine\Exception\InvalidOperationException
+   *   Thrown if the thumbnails directory format is invalid, or if the directory
+   *   does not exist in the configuration.
+   * @throws \RuntimeException
+   *   Thrown if the thumbnails directory 1) did not exist and could not be
+   *   created in a writable form, or 2) existed, but was not writable and could
+   *   not be altered so that it was.
    */
   private function prepareLocalThumbnailUri(string $videoOrChannelId, bool $isRecorded, string $thumbnailReferenceId) : ?string {
+    $thumbnailsDirectory = $this->getValidThumbnailsDirectory();
+    // Ensure the directory is created, and made writable if necessary.
+    if (!$this->fileSystem->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS)) {
+      throw new \RuntimeException('Could not prepare a writable thumbnails directory.');
+    }
+
     // The thumbnail file name (sans extension) is chosen to be unique for a
     // given video/media entity combination (because the thumbnail reference IDs
     // of different media entities should be different).
     $thumbnailFileNameBase = static::LOCAL_THUMBNAIL_FILENAME_PREFIX
       . static::LOCAL_THUMBNAIL_FILENAME_PART_SEPARATOR
-      . bin2hex(sha1($thumbnailReferenceId))
+      . sha1($thumbnailReferenceId)
       . static::LOCAL_THUMBNAIL_FILENAME_PART_SEPARATOR
       . ($isRecorded ? static::LOCAL_THUMBNAIL_FILENAME_RECORDED_IDENTIFIER : static::LOCAL_THUMBNAIL_FILENAME_STREAM_IDENTIFIER)
       . static::LOCAL_THUMBNAIL_FILENAME_PART_SEPARATOR
-      . bin2hex(sha1($videoOrChannelId));
-    
+      . sha1($videoOrChannelId);
+
+    $existingThumbnailFilenames = $this->fileSystem->scanDirectory($thumbnailsDirectory, '/^' . $thumbnailFileNameBase . '..*/');
+    if (count($existingThumbnailFilenames) > 0) {
+      // A thumbnail file already exists. Return the first one.
+      return $existingThumbnailFilenames[0];
+    }
+
+    // Otherwise, we'll have to try to download the thumbnail. We will first
+    // make a call to the IBM Video API to get the remote thumbnail URI. The
+    // type of call made depends on whether the video is recorded (indicating we
+    // need to retrieve the thumbnail of that particular video) or is a stream
+    // (indicating we need to use the thumbnail for the corresponding channel).
+    try {
+      $remoteThumbnailUri = $isRecorded ? $this->apiMediator->getDefaultVideoThumbnailUri($videoOrChannelId) : $this->apiMediator->getDefaultChannelThumbnailUri($videoOrChannelId);
+    }
+    catch (HttpTransferException $e) {
+      // @todo Log.
+      return NULL;
+    }
+    catch (IbmVideoApiBadResponseException $e) {
+      // @todo Log.
+      return NULL;
+    }
+    if ($remoteThumbnailUri === NULL) {
+      // @todo Log.
+      return NULL;
+    }
+    // Next, determine the local URI by combining the thumbnail directory path
+    // with the base file name and the extension.
+    $extension = $this->getThumbnailFileExtension($remoteThumbnailUri) ?? static::LOCAL_THUMBNAIL_DEFAULT_EXTENSION;
+    $localUri = $thumbnailsDirectory . DIRECTORY_SEPARATOR . $thumbnailFileNameBase . '.' . $extension;
+    try {
+      $thumbnailFileRequestResponse = $this->httpClient->request('GET', $remoteThumbnailUri, [RequestOptions::HTTP_ERRORS => FALSE]);
+    }
+    catch (TransferException $e) {
+      // @todo Log.
+      return NULL;
+    }
+    if ($thumbnailFileRequestResponse->getStatusCode() !== 200) {
+      return NULL;
+    }
+
+    $this->fileSystem->saveData((string) $thumbnailFileRequestResponse->getBody(), $localUri, FileSystemInterface::EXISTS_REPLACE);
+    return $localUri;
+  }
+
+  /**
+   * Attempts to determine the file extension of a thumbnail.
+   *
+   * NOTE: This method is based on
+   * @see \Drupal\media\Plugin\media\Source\OEmbed::getThumbnailFileExtensionFromUrl().
+   *
+   * @param string $remoteUri
+   *   Remote URI of the thumbnail.
+   *
+   * @return string|null
+   *   Thumbnail file extension, or NULL if it could not be determined.
+   */
+  private function getThumbnailFileExtension(string $remoteUri): ?string {
+    // Attempt to extract the extension by parsing the URI.
+    $path = parse_url($remoteUri, PHP_URL_PATH);
+    if ($path !== FALSE && $path !== NULL && $path !== '') {
+      $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+      if ($extension !== '') {
+        return $extension;
+      }
+    }
+
+    // See if the headers from a HEAD request to the URI yield a MIME type.
+    $contentTypes = $this->httpClient->request('HEAD', $remoteUri)->getHeader('Content-Type');
+    if ($contentTypes !== []) {
+      // Guess the extension from the first MIME type and use the first of the
+      // returned guesses.
+      $contentType = $contentTypes[0];
+      if ($contentType !== '') {
+        $extensions = MimeTypes::getDefault()->getExtensions($contentType);
+        if ($extensions !== []) {
+          // The first extension is preferred, so return it if it isn't empty.
+          $extension = $extensions[0];
+          if ($extension !== '') {
+            return $extension;
+          }
+        }
+      }
+    }
+
+    return NULL;
+  }
+
+  /**
+   * Gets the thumbnails directory, if it is valid.
+   *
+   * The thumbnails directory is considered valid if it is both 1) non-empty and
+   * 2) is a valid URI according to the stream wrapper manager's isValidUri()
+   * method.
+   *
+   * @return string
+   *   Thumbnails directory.
+   *
+   * @throws \Ranine\Exception\InvalidOperationException
+   *   Thrown if the thumbnails directory is invalid, or does not exist in the
+   *   configuration.
+   */
+  private function getValidThumbnailsDirectory() : string {
+    $configuration = $this->getConfiguration();
+    if (!array_key_exists('thumbnails_directory', $configuration)) {
+      throw new InvalidOperationException('The thumbnails directory does not exist in the configuration.');
+    }
+    $thumbnailsDirectory = (string) $configuration['thumbnails_directory'];
+    if ($thumbnailsDirectory === '') {
+      throw new InvalidOperationException('The thumbnails directory is empty.');
+    }
+    if (!$this->streamWrapperManager->isValidUri($thumbnailsDirectory)) {
+      throw new InvalidOperationException('The thumbnails directory is invalid.');
+    }
+    return $thumbnailsDirectory;
   }
 
   /**
@@ -478,7 +640,9 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       $container->get('plugin.manager.field.field_type'),
       $container->get('config.factory'),
       $container->get('file_system'),
-      $container->get('stream_wrapper_manager'));
+      $container->get('stream_wrapper_manager'),
+      $container->get('http_client'),
+      $container->get('ibm_video_media_type.ibm_video_api_mediator'));
   }
 
   /**
