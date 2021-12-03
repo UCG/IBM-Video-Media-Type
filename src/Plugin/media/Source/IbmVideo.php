@@ -24,7 +24,9 @@ use Drupal\media\MediaTypeInterface;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\RequestOptions;
+use Psr\Log\LoggerInterface;
 use Ranine\Exception\InvalidOperationException;
+use Ranine\Helper\ExceptionHelpers;
 use Ranine\Helper\StringHelpers;
 use Ranine\Helper\ThrowHelpers;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -127,6 +129,11 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   private ClientInterface $httpClient;
 
   /**
+   * Logger.
+   */
+  private LoggerInterface $logger;
+
+  /**
    * Stream wrapper manager.
    */
   private StreamWrapperManagerInterface $streamWrapperManager;
@@ -156,6 +163,8 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *   HTTP client.
    * @param \Drupal\ibm_video_media_type\IbmVideoApiMediator $apiMediator
    *   IBM video API mediator.
+   * @param \Psr\Log\LoggerInterface $logger
+   *   Logger.
    */
   public function __construct(array $configuration,
     string $pluginId,
@@ -167,11 +176,13 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     FileSystemInterface $fileSystem,
     StreamWrapperManagerInterface $streamWrapperManager,
     ClientInterface $httpClient,
-    IbmVideoApiMediator $apiMediator) {
+    IbmVideoApiMediator $apiMediator,
+    LoggerInterface $logger) {
     parent::__construct($configuration, $pluginId, $pluginDefinition, $entityTypeManager, $entityFieldManager, $fieldTypePluginManager, $configFactory);
     $this->apiMediator = $apiMediator;
     $this->fileSystem = $fileSystem;
     $this->httpClient  = $httpClient;
+    $this->logger = $logger;
     $this->streamWrapperManager = $streamWrapperManager;
   }
 
@@ -515,15 +526,24 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       $remoteThumbnailUri = $isRecorded ? $this->apiMediator->getDefaultVideoThumbnailUri($videoOrChannelId) : $this->apiMediator->getDefaultChannelThumbnailUri($videoOrChannelId);
     }
     catch (HttpTransferException $e) {
-      // @todo Log.
+      $this->logger->warning('A transfer error occured when attempting to download the thumbnail for {videoOrChannel} ID "{id}". Exception chain: {chain}',
+        [
+          'id' => $videoOrChannelId,
+          'videoOrChannel' => $isRecorded ? 'video' : 'channel',
+          'chain' => ExceptionHelpers::getExceptionChainMessages($e, ' <= '),
+        ]);
       return NULL;
     }
     catch (IbmVideoApiBadResponseException $e) {
-      // @todo Log.
+      $this->logger->warning('The IBM Video API returned a bad response when attempting to download the thumbnail for {videoOrChannel} ID "{id}". Exception chain: {chain}',
+        [
+          'id' => $videoOrChannelId,
+          'videoOrChannel' => $isRecorded ? 'video' : 'channel',
+          'chain' => ExceptionHelpers::getExceptionChainMessages($e, ' <= '),
+        ]);
       return NULL;
     }
     if ($remoteThumbnailUri === NULL) {
-      // @todo Log.
       return NULL;
     }
     // Next, determine the local URI by combining the thumbnail directory path
@@ -534,10 +554,20 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       $thumbnailFileRequestResponse = $this->httpClient->request('GET', $remoteThumbnailUri, [RequestOptions::HTTP_ERRORS => FALSE]);
     }
     catch (TransferException $e) {
-      // @todo Log.
+      $this->logger->warning('Transfer error when attempting to download thumbnail at "{uri}". Exception chain: {chain}',
+        [
+          'uri' => $remoteThumbnailUri,
+          'chain' => ExceptionHelpers::getExceptionChainMessages($e, ' <= '),
+        ]);
       return NULL;
     }
-    if ($thumbnailFileRequestResponse->getStatusCode() !== 200) {
+    $thumbnailFileRequestResponseCode = $thumbnailFileRequestResponse->getStatusCode();
+    if ($thumbnailFileRequestResponseCode !== 200) {
+      $this->logger->warning('Bad response code when attempting to download thumbnail at "{uri}". Response code 200 expected, but {code} was received.',
+        [
+          'uri' => $remoteThumbnailUri,
+          'code' => $thumbnailFileRequestResponseCode,
+        ]);
       return NULL;
     }
 
@@ -642,7 +672,8 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       $container->get('file_system'),
       $container->get('stream_wrapper_manager'),
       $container->get('http_client'),
-      $container->get('ibm_video_media_type.ibm_video_api_mediator'));
+      $container->get('ibm_video_media_type.ibm_video_api_mediator'),
+      $container->get('logger.factory')->get('ibm_video_media_type'));
   }
 
   /**
