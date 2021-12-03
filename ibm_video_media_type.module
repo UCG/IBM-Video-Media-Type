@@ -4,8 +4,6 @@
  * @file
  * Hook implementations for the IBM Video Media Type module.
  *
- * @todo Adjust widget to work with recent changes.
- * @todo Adjust formatter '' '' '' '' ''.
  * @todo Adjust constraint validation '' '' '' '' ''.
  * @todo Add logging.
  * @todo Review.

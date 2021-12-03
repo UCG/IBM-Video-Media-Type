@@ -99,7 +99,29 @@ class IbmVideoWidget extends WidgetBase {
       throw new \InvalidArgumentException('$delta is not an integer.');
     }
 
-    $element['value'] = [
+    $videoData = $this->getVideoData($items, $delta);
+    // We will need the thumbnail reference ID later, when we generate the
+    // source field value after submission in massageFormValues(). Since that
+    // method does not receive something that retrieves the media entity as an
+    // argument, we'll try to retrieve the thumbnail reference ID here and store
+    // it in the '#custom' property. We'll also go ahead and obtain the default
+    // video URL.
+    if ($videoData === NULL) {
+      $defaultVideoUrl = NULL;
+      $thumbnailReferenceId = NULL;
+    }
+    else {
+      $defaultVideoUrl = $this->getDefaultVideoUrl($videoData);
+      if (array_key_exists(IbmVideo::VIDEO_DATA_THUMBNAIL_REFERENCE_ID_PROPERTY_NAME, $videoData)) {
+        $thumbnailReferenceId = $videoData[IbmVideo::VIDEO_DATA_THUMBNAIL_REFERENCE_ID_PROPERTY_NAME];
+        if (!$this->source->isThumbnailReferenceIdValid($thumbnailReferenceId)) {
+          // Don't use the thumbnail reference ID if it's invalid.
+          $thumbnailReferenceId = NULL;
+        }
+      }
+    }
+    $element['#custom'] = ['thumbnail_reference_id' => $thumbnailReferenceId];
+    $element['url'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Embed URL'),
       '#description' => $this->t(
@@ -112,9 +134,8 @@ and/or fragment. This URL may be "cleaned up" before it is used to embed the
 video.
 EOS
       ),
-      '#default_value' => $this->getDefaultVideoUrl($items, $delta),
+      '#default_value' => $defaultVideoUrl,
       '#size' => 50,
-      '#placeholder' => 'video.ibm.com/012345678',
       '#maxlength' => 120,
       '#pattern' => IbmVideoUrlHelpers::REGEX_EMBED_URL,
     ];
@@ -126,18 +147,23 @@ EOS
    * {@inheritdoc}
    */
   public function massageFormValues(array $values, array $form, FormStateInterface $form_state) : array {
-    foreach ($values as &$itemValues) {
+    foreach ($values as $elementKey => &$itemValues) {
       assert(is_array($itemValues) && isset($itemValues['value']));
       $url = (string) $itemValues['value'];
       if ($url === '') {
         $itemValues['value'] = NULL;
       }
       else {
-        $videoId = NULL;
-        $baseEmbedUrl = IbmVideoUrlHelpers::extractBaseEmbedUrlAndVideoId($url, $videoId);
-        // Set the field value to the JSON appropriate for the base embed URL
-        // and video ID.
-        $itemValues['value'] = $this->source->prepareVideoData($baseEmbedUrl, $videoId);
+        $id = '';
+        $isRecorded = FALSE;
+        IbmVideoUrlHelpers::parseEmbedUrl($url, $id, $isRecorded);
+        // Unset the "url" property, and set the field value in correspondence
+        // with the ID, "is recorded" flag, and with the thumbnail reference ID
+        // we set earlier.
+        $thumbnailReferenceId = $form[$elementKey]['#custom'];
+        assert(is_null($thumbnailReferenceId) || $this->source->isThumbnailReferenceIdValid($thumbnailReferenceId));
+        unset($itemValues['url']);
+        $itemValues['value'] = $this->source->prepareVideoData($id, $isRecorded, $thumbnailReferenceId);
       }
     }
 
@@ -147,20 +173,37 @@ EOS
   /**
    * Gets the default video URL to associate with the given field item.
    *
-   * @param \Drupal\Core\Field\FieldItemListInterface $items
-   *   Field item list.
-   * @param int $delta
-   *   Position of field item in list.
+   * @param array $videoData
+   *   Video data, as returned by $this-getVideoData().
    *
    * @return string|null
-   *   Default video URL, or NULL if the field is not set (or set to NULL) at
-   *   $delta. Also can be NULL if the field is corrupt at $delta.
+   *   Default video URL. Can be NULL if the field is corrupt at $delta.
    */
-  private function getDefaultVideoUrl(FieldItemListInterface $items, int $delta) : ?string {
+  private function getDefaultVideoUrl(array $videoData) : ?string {
     // Build an IBM video URL to use as the default value for the text field. If
     // is nothing is set for the field item, don't display anything for the
     // default value.
+    $id = $videoData[IbmVideo::VIDEO_DATA_ID_PROPERTY_NAME];
+    $isRecorded = $videoData[IbmVideo::VIDEO_DATA_RECORDED_FLAG_PROPERTY_NAME];
+    if (!$this->source->isIsRecordedFlagValid($isRecorded) || !$this->source->isVideoOrChannelIdValid($id)) {
+      return NULL;
+    }
+    return IbmVideoUrlHelpers::assembleEmbedUrl($id, $isRecorded, '');
+  }
 
+  /**
+   * Gets the video data associated with the given field item, if possible.
+   *
+   * @param \Drupal\Core\Field\FieldItemListInterface $items
+   *   Field item list.
+   * @param int $delta
+   *   Position of item in list.
+   *
+   * @return array|null
+   *   Video data, if it exists, or NULL if the source field is not set (or set
+   *   to NULL) at $delta. Also can be NULL if the field is corrupt at $delta.
+   */
+  private function getVideoData(FieldItemListInterface $items, int $delta) : ?array {
     if (!isset($items[$delta])) {
       return NULL;
     }
@@ -176,8 +219,8 @@ EOS
     if ($this->source->tryParseVideoData($value, $videoData) !== 0) {
       return NULL;
     }
-    $baseEmbedUrl = $videoData[IbmVideo::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME];
-    return (is_string($baseEmbedUrl) && IbmVideoUrlHelpers::isBaseEmbedUrlValid($baseEmbedUrl)) ? $baseEmbedUrl : NULL;
+
+    return $videoData;
   }
 
   /**

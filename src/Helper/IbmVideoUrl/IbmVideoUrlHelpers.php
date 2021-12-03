@@ -90,17 +90,23 @@ final class IbmVideoUrlHelpers {
    *   TRUE if the video is recorded; FALSE if it is a stream.
    * @param string $scheme
    *   Scheme. Can be empty.
-   * @param IbmVideoUrlParameters $parameters
-   *   Video player parameters to include in query string of returned URL.
+   * @param IbmVideoUrlParameters|null $parameters
+   *   (optional) Video player parameters to include in query string of returned
+   *   URL, or NULL to assemble a URL without parameters.
    *
    * @throws \InvalidArgumentException
    *   Thrown if $id is empty.
    */
-  public static function assembleEmbedUrl(string $id, bool $isRecorded, string $scheme, IbmVideoUrlParameters $parameters) : string {
+  public static function assembleEmbedUrl(string $id, bool $isRecorded, string $scheme, ?IbmVideoUrlParameters $parameters = NULL) : string {
     ThrowHelpers::throwIfEmptyString($id, 'id');
-    $query = $parameters->toEmbedUrlQueryString();
     $baseUrl = $isRecorded ? static::EMBED_URL_BASE_RECORDED : static::EMBED_URL_BASE_STREAM;
-    return ($scheme . $baseUrl . rawurlencode($id) . '?' . $query);
+    if ($parameters === NULL) {
+      return ($scheme . $baseUrl . rawurlencode($id));
+    }
+    else {
+      $query = $parameters->toEmbedUrlQueryString();
+      return ($scheme . $baseUrl . rawurlencode($id) . '?' . $query);
+    }
   }
 
   /**

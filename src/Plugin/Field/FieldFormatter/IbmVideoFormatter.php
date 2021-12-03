@@ -175,25 +175,28 @@ class IbmVideoFormatter extends FormatterBase {
         goto finish_element_item;
       }
 
-      // Try to extract base embed URL and video ID from field item.
+      // Try to extract the video/channel ID and "is recorded" flag from the
+      // item.
       $videoData = [];
       if ($this->source->tryParseVideoData($value, $videoData) !== 0) {
         $renderElement[$delta] = [];
         goto finish_element_item;
       }
-      $baseEmbedUrl = $videoData[IbmVideo::VIDEO_DATA_BASE_EMBED_BASE_URL_PROPERTY_NAME];
-      if (!$this->source->isBaseEmbedUrlValid($baseEmbedUrl)) {
+      $id = $videoData[IbmVideo::VIDEO_DATA_ID_PROPERTY_NAME];
+      $isRecorded = $videoData[IbmVideo::VIDEO_DATA_RECORDED_FLAG_PROPERTY_NAME];
+      if (!$this->source->isIsRecordedFlagValid($isRecorded)|| !$this->source->isVideoOrChannelIdValid($id)) {
         $renderElement[$delta] = [];
         goto finish_element_item;
       }
-      /** @var string $baseEmbedUrl */
+      /** @var string $id */
+      /** @var bool $isRecorded */
 
       // Render the item with a template defined by this module. We use the "//"
       // "scheme" when generating the embed URL, to force the embed iFrame
       // to be served from the same protocol as is the main website.
       $renderElement[$delta] = [
         '#theme' => 'ibm_video_player',
-        '#videoUrl' => IbmVideoUrlHelpers::assembleEmbedUrl($baseEmbedUrl, '//', $this->getEmbedUrlParameters()),
+        '#videoUrl' => IbmVideoUrlHelpers::assembleEmbedUrl($id, $isRecorded, '//', $this->getEmbedUrlParameters()),
       ];
 
 finish_element_item:
