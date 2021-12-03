@@ -18,11 +18,6 @@ use Symfony\Component\Validator\Constraint;
 class IbmVideoDataConstraint extends Constraint {
 
   /**
-   * Indicates the channel ID is invalid.
-   */
-  public string $invalidBaseEmbedUrlMessage = 'The base embed URL is invalid.';
-
-  /**
    * Indicates the JSON provided has an incorrect set of root-level keys.
    */
   public string $invalidJsonKeySetMessage = 'The JSON provided has an incorrect set of root-level keys.';
@@ -33,8 +28,18 @@ class IbmVideoDataConstraint extends Constraint {
   public string $invalidIdMessage = 'The video/channel ID is invalid.';
 
   /**
+   * Indicates the "is recorded" flag is invalid.
+   */
+  public string $invalidIsRecordedFlagMessage = 'The "is recorded" flag is invalid.';
+
+  /**
    * Indicates the IBM video data string is not valid JSON.
    */
   public string $invalidJsonMessage = 'The string provided is not valid JSON.';
+
+  /**
+   * Indicates the thumbnail reference ID is invalid.
+   */
+  public string $invalidThumbnailReferenceIdMessage = 'The thumbnail reference ID is invalid.';
 
 }
