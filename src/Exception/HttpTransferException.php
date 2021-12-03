@@ -12,7 +12,7 @@ use Ranine\Helper\StringHelpers;
 class HttpTransferException extends \RuntimeException {
 
   /**
-   * Creates a new class HttpTransferException object.
+   * Creates a new HttpTransferException object.
    *
    * @param string|null $message
    *   Message pertaining to exception; can be NULL or an empty string, in which

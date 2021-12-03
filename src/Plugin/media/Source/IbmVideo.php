@@ -284,7 +284,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   public function getSourceFieldValue(MediaInterface $media) : ?string {
     // See code in parent method.
 
-    $sourceField = $this->getConfiguration();
+    $configuration = $this->getConfiguration();
     if (empty($configuration['source_field'])) {
       throw new \RuntimeException('Source field for IBM video media source is not defined.');
     }

@@ -12,6 +12,13 @@ use Drupal\Component\Utility\UrlHelper;
 class IbmVideoUrlParameters {
 
   /**
+   * Code for the high default quality setting.
+   *
+   * @var int
+   */
+  public const DEFAULT_QUALITY_HIGH = 3;
+
+  /**
    * Code for the low default quality setting.
    *
    * @var int
@@ -24,13 +31,6 @@ class IbmVideoUrlParameters {
    * @var int
    */
   public const DEFAULT_QUALITY_MEDIUM = 2;
-
-  /**
-   * Code for the high default quality setting.
-   *
-   * @var int
-   */
-  public const DEFAULT_QUALITY_HIGH = 3;
 
   /**
    * Code for the "direct" video WMode setting.
@@ -133,7 +133,7 @@ class IbmVideoUrlParameters {
    * Gets the initial volume.
    *
    * @return int
-   *   Initial volume. An integer in the range [0, 100].
+   *   Initial volume. An integer in the range 0-100, inclusive.
    */
   public function getInitialVolume() : int {
     return $this->initialVolume;
@@ -185,7 +185,7 @@ class IbmVideoUrlParameters {
    * Sets the default quality to the provided value.
    *
    * @param int|null $defaultQuality
-   *   NULL if no default quality. Otherwise, one of
+   *   NULL for no default quality. Otherwise, one of
    *   static::DEFAULT_QUALITY_LOW, static::DEFAULT_QUALITY_MEDIUM, or
    *   static::DEFAULT_QUALITY_HIGH.
    *
@@ -216,7 +216,7 @@ class IbmVideoUrlParameters {
    * Sets the initial volume.
    *
    * @param int $initialVolume
-   *   Initial volume. An integer in the range [0, 100].
+   *   Initial volume. An integer in the range 0-100, inclusive.
    *
    * @return $this
    *
@@ -272,7 +272,7 @@ class IbmVideoUrlParameters {
    * Sets the WMode property.
    *
    * @param int|null $wMode
-   *   NULL if no WMode. Otherwise, one of static::WMODE_DIRECT,
+   *   NULL for no WMode. Otherwise, one of static::WMODE_DIRECT,
    *   static::WMODE_OPAQUE, static::_WMODE_TRANSPARENT, or
    *   static::_WMODE_WINDOW.
    *
@@ -336,7 +336,10 @@ class IbmVideoUrlParameters {
           throw new \RuntimeException('Unexpected WMode.');
       }
     }
-    $trueFalseTextBoolConversion = fn(bool $s) : string => $s ? 'true' : 'false';
+    $trueFalseTextBoolConversion = fn(bool $v) : string => $v ? 'true' : 'false';
+    // Note that we use "1"/"0" (instead of "true"/"false") when representing
+    // the "useHtml5Ui" parameter, as is done in
+    // https://support.video.ibm.com/hc/en-us/articles/207851927-Using-URL-Parameters-and-Embed-API-for-Custom-Players.
     $query = [
       'initialVolume' => (string) $this->initialVolume,
       'showTitle' => $trueFalseTextBoolConversion($this->showTitle),

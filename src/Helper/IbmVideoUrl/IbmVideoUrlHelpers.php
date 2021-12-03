@@ -27,7 +27,7 @@ final class IbmVideoUrlHelpers {
     . '(?:' . self::REGEX_URL_PATH_SEGMENT_CHARACTER_LOWERCASE
     . ')+(?:\\?' . self::REGEX_URL_QUERY_LOWERCASE
     . ')?(?:#' . self::REGEX_URL_FRAGMENT_LOWERCASE . ')?';
-  
+
   /**
    * Base URL (no scheme, query, or ID) for recorded video.
    *
@@ -43,7 +43,7 @@ final class IbmVideoUrlHelpers {
   private const EMBED_URL_BASE_STREAM = 'video.ibm.com/';
 
   /**
-   * The regex for a valid lowercase URL path segment character
+   * The regex for a valid lowercase URL path segment character.
    *
    * The path segment does not include any forward slashes. Each path segment is
    * allowed to contain certain characters, as well as "%" followed by two hex
@@ -56,7 +56,7 @@ final class IbmVideoUrlHelpers {
     '[a-z]|[0-9]|-|\\.|_|~|!|\\$|&|\'|\\(|\\)|\\*|\\+|,|;|=|:|@|(?:%(?:[a-f]|[0-9]){2})';
   
   /**
-   * The regex for a valid lowercase URL query string segment.
+   * The regex for a valid lowercase URL query string.
    *
    * See RFC 3986, 3.4: https://www.rfc-editor.org/rfc/rfc3986#section-3.4.
    *
@@ -66,7 +66,7 @@ final class IbmVideoUrlHelpers {
     '(?:[a-z]|[0-9]|-|\\.|_|~|!|\\$|&|\'|\\(|\\)|\\*|\\+|,|;|=|:|@|/|\\?|(?:%(?:[a-f]|[0-9]){2}))*';
   
   /**
-   * The regex for a valid lowercase URL query string fragment.
+   * The regex for a valid lowercase URL fragment.
    *
    * See RFC 3986, 3.5: https://www.rfc-editor.org/rfc/rfc3986#section-3.5.
    *
@@ -128,26 +128,26 @@ final class IbmVideoUrlHelpers {
    */
   public static function parseEmbedUrl(string $embedUrl, string &$id, bool &$isRecorded) : void {
     ThrowHelpers::throwIfEmptyString($embedUrl, 'embedUrl');
-    $invalidUrlConditionalThrow = function(bool $shouldThrow) : void {
-      if ($shouldThrow) { throw new \InvalidArgumentException('$url is invalid.'); } };
+
     // Grab everything after the initial "video.ibm.com/embed/".
-    // @todo Make this more efficient (no need to store first part here).
-    $parts = explode('video.ibm.com/embed/', $embedUrl, 2);
-    $invalidUrlConditionalThrow(count($parts) !== 2);
-    $remainder = $parts[1];
+    try {
+      $remainder = static::getSubstringAfter($embedUrl, 'video.ibm.com/embed/');
+    }
+    catch (\InvalidArgumentException $e) {
+      throw new \InvalidArgumentException('$embedUrl is invalid.');
+    }
     $recordedPathPart = 'recorded/';
     $recordedPathPartLength = 9;
     if (strlen($remainder) > $recordedPathPartLength && substr_compare($remainder, $recordedPathPart, 0, $recordedPathPartLength) === 0) {
       $isRecorded = TRUE;
-      // If the first part of $remainder is "recorded/", the video ID should
+      // Since the first part of $remainder is "recorded/", the video ID should
       // consist of everything since "recorded/" and up to "?".
       $encodedId = static::getSubstringUpTo($recordedPathPartLength, $remainder, '?');
     }
     else {
       $isRecorded = FALSE;
-      // Otherwise, the *channel* ID should consist of everything after "embed/"
-      // and up to "?".
-      $encodedId = static::getSubstringUpTo($recordedPathPartLength, $remainder, '?');
+      // Otherwise, the *channel* ID should consist of everything up to "?".
+      $encodedId = static::getSubstringUpTo(0, $remainder, '?');
     }
     $id = urldecode($encodedId);
   }
@@ -160,6 +160,38 @@ final class IbmVideoUrlHelpers {
    */
   public static function isVideoOrChannelIdValid(string $id) : bool {
     return $id === '' ? FALSE : TRUE;
+  }
+
+  /**
+   * Returns the part of $haystack that occurs after $needle.
+   *
+   * @param string $haystack
+   *   String from which the substring is taken.
+   * @param string $needle
+   *   String after which to take substring.
+   *
+   * @return string
+   *   The substring of $haystack starting immediately after the first
+   *   occurrence of $needle, and continuing to the end of $haystack. If $needle
+   *   is an empty string, returns $haystack.
+   *
+   * @throws \InvalidArgumentException
+   *   Thrown if $needle does not exist in $haystack.
+   */
+  private static function getSubstringAfter(string $haystack, string $needle) : string {
+    if ($needle === '') {
+      return $haystack;
+    }
+    $needlePosition = strpos($haystack, $needle);
+    if ($needlePosition === FALSE) {
+      throw new \InvalidArgumentException('$needle does not exist in $haystack.');
+    }
+    if ($needlePosition === (strlen($haystack) - 1)) {
+      return '';
+    }
+    else {
+      return substr($haystack, $needlePosition + 1);
+    }
   }
 
   /**
@@ -193,6 +225,7 @@ final class IbmVideoUrlHelpers {
     }
 
     $needlePosition = strpos($haystack, $needle, $startPosition);
+    assert($needlePosition >= $startPosition);
     if ($needlePosition === FALSE) {
       // The needle was not found.
       return substr($haystack, $startPosition);

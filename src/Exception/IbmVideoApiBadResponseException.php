@@ -12,7 +12,7 @@ use Ranine\Helper\StringHelpers;
 class IbmVideoApiBadResponseException extends \RuntimeException {
 
   /**
-   * Creates a new class IbmVideoApiBadResponseException object.
+   * Creates a new IbmVideoApiBadResponseException object.
    *
    * @param string|null $message
    *   Message pertaining to exception; can be NULL or an empty string, in which

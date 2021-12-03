@@ -34,13 +34,13 @@ class IbmVideoWidget extends WidgetBase {
    * Creates a new IBM video widget.
    *
    * @param string $pluginId
-   *   Formatter plugin ID.
+   *   Widget plugin ID.
    * @param mixed $pluginDefinition
    *   Plugin implementation definition.
    * @param \Drupal\Core\Field\FieldDefinitionInterface $fieldDefinition
-   *   Definition of the field with which the formatter is associated.
+   *   Definition of the field with which the widget is associated.
    * @param array $settings
-   *   Formatter settings.
+   *   Widget settings.
    * @param array $thirdPartySettings
    *   Third party settings.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
@@ -59,20 +59,20 @@ class IbmVideoWidget extends WidgetBase {
     EntityTypeManagerInterface $entityTypeManager) {
     parent::__construct($pluginId, $pluginDefinition, $fieldDefinition, $settings, $thirdPartySettings);
 
-    $bundle = $fieldDefinition->getTargetBundle();
-    if (!is_string($bundle)) {
-      throw new \InvalidArgumentException('Cannot create an IBM video formatter defined for a field type without a target media bundle.');
+    if ($fieldDefinition->getTargetEntityTypeId() !== 'media') {
+      throw new \InvalidArgumentException('Cannot create an IBM video widget defined for a field type with a target entity type that is not "media".');
     }
 
-    if ($fieldDefinition->getTargetEntityTypeId() !== 'media') {
-      throw new \InvalidArgumentException('Cannot create an IBM video formatter defined for a field type with a target entity type that is not "media".');
+    $bundle = $fieldDefinition->getTargetBundle();
+    if (!is_string($bundle)) {
+      throw new \InvalidArgumentException('Cannot create an IBM video widget defined for a field type without a valid target media bundle.');
     }
 
     /** @var \Drupal\media\MediaTypeInterface */
     $mediaType = $entityTypeManager->getStorage('media_type')->load($bundle);
     $source = $mediaType->getSource();
     if (!($source instanceof IbmVideo)) {
-      throw new \InvalidArgumentException('Cannot create an IBM video formatter defined for a field type with a media source that is not of type \\Drupal\\ibm_video_media_type\\Plugin\\media\\Source\\IbmVideo.');
+      throw new \InvalidArgumentException('Cannot create an IBM video widget defined for a field type with a media source that is not of type \\Drupal\\ibm_video_media_type\\Plugin\\media\\Source\\IbmVideo.');
     }
     $this->source = $source;
   }
@@ -102,10 +102,10 @@ class IbmVideoWidget extends WidgetBase {
     $videoData = $this->getVideoData($items, $delta);
     // We will need the thumbnail reference ID later, when we generate the
     // source field value after submission in massageFormValues(). Since that
-    // method does not receive something that retrieves the media entity as an
-    // argument, we'll try to retrieve the thumbnail reference ID here and store
-    // it in the '#custom' property. We'll also go ahead and obtain the default
-    // video URL.
+    // method does not receive something that can retrieve the media entity
+    // and/or its associated source field, we'll try to retrieve the thumbnail
+    // reference ID here and store it in the '#custom' property. We'll also go
+    // ahead and obtain the default video URL.
     if ($videoData === NULL) {
       $defaultVideoUrl = NULL;
       $thumbnailReferenceId = NULL;
@@ -118,6 +118,9 @@ class IbmVideoWidget extends WidgetBase {
           // Don't use the thumbnail reference ID if it's invalid.
           $thumbnailReferenceId = NULL;
         }
+      }
+      else {
+        $thumbnailReferenceId = NULL;
       }
     }
     $element['#custom'] = ['thumbnail_reference_id' => $thumbnailReferenceId];
@@ -149,7 +152,11 @@ EOS
   public function massageFormValues(array $values, array $form, FormStateInterface $form_state) : array {
     foreach ($values as $elementKey => &$itemValues) {
       assert(is_array($itemValues) && isset($itemValues['value']));
-      $url = (string) $itemValues['value'];
+      $url = (string) $itemValues['url'];
+      // Unset the "url" element, as it doesn't actually correspond to a field
+      // component (it is just used to temporarily store the URL so we can
+      // generate the actual field value).
+      unset($itemValues[$url]);
       if ($url === '') {
         $itemValues['value'] = NULL;
       }
@@ -157,12 +164,10 @@ EOS
         $id = '';
         $isRecorded = FALSE;
         IbmVideoUrlHelpers::parseEmbedUrl($url, $id, $isRecorded);
-        // Unset the "url" property, and set the field value in correspondence
-        // with the ID, "is recorded" flag, and with the thumbnail reference ID
-        // we set earlier.
+        // Set the field value in correspondence with the ID, "is recorded"
+        // flag, and the thumbnail reference ID we set earlier.
         $thumbnailReferenceId = $form[$elementKey]['#custom'];
         assert(is_null($thumbnailReferenceId) || $this->source->isThumbnailReferenceIdValid($thumbnailReferenceId));
-        unset($itemValues['url']);
         $itemValues['value'] = $this->source->prepareVideoData($id, $isRecorded, $thumbnailReferenceId);
       }
     }
@@ -174,15 +179,12 @@ EOS
    * Gets the default video URL to associate with the given field item.
    *
    * @param array $videoData
-   *   Video data, as returned by $this-getVideoData().
+   *   Video data, as returned by $this->getVideoData().
    *
    * @return string|null
-   *   Default video URL. Can be NULL if the field is corrupt at $delta.
+   *   Default video URL. Will be NULL if the URL in $videoData is invalid.
    */
   private function getDefaultVideoUrl(array $videoData) : ?string {
-    // Build an IBM video URL to use as the default value for the text field. If
-    // is nothing is set for the field item, don't display anything for the
-    // default value.
     $id = $videoData[IbmVideo::VIDEO_DATA_ID_PROPERTY_NAME];
     $isRecorded = $videoData[IbmVideo::VIDEO_DATA_RECORDED_FLAG_PROPERTY_NAME];
     if (!$this->source->isIsRecordedFlagValid($isRecorded) || !$this->source->isVideoOrChannelIdValid($id)) {
