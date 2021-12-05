@@ -82,6 +82,8 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
 
   /**
    * Default local thumbnail extension, if one could not be determined.
+   *
+   * @var string
    */
   private const LOCAL_THUMBNAIL_DEFAULT_EXTENSION = 'unknown';
 
@@ -93,7 +95,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   private const LOCAL_THUMBNAIL_FILENAME_PART_SEPARATOR = '_';
 
   /**
-   * The prefix for local thumbnail filenames.
+   * The prefix for local thumbnail filename.
    *
    * @var string
    */
@@ -104,14 +106,14 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *
    * @var string
    */
-  private const LOCAL_THUMBNAIL_FILENAME_RECORDED_IDENTIFIER = 'recorded';
+  private const LOCAL_THUMBNAIL_FILENAME_RECORDED_IDENTIFIER = 'r';
 
   /**
    * The "streamed video" identifier for use in a local thumbnail filename.
    *
    * @var string
    */
-  private const LOCAL_THUMBNAIL_FILENAME_STREAM_IDENTIFIER = 'stream';
+  private const LOCAL_THUMBNAIL_FILENAME_STREAM_IDENTIFIER = 's';
 
   /**
    * IBM video API mediator.
@@ -217,9 +219,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    * {@inheritdoc}
    */
   public function defaultConfiguration() {
-    return [
-      'thumbnails_directory' => 'public://ibm_video_thumbnails',
-    ] + parent::defaultConfiguration();
+    return ['thumbnails_directory' => 'public://ibm_video_thumbnails'] + parent::defaultConfiguration();
   }
 
   /**
@@ -257,7 +257,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       if (!$this->isVideoOrChannelIdValid($id) || !$this->isIsRecordedFlagValid($isRecorded) || !$this->isThumbnailReferenceIdValid($thumbnailReferenceId)) {
         return parent::getMetadata($media, $name);
       }
-      return ($this->prepareLocalThumbnailUri($thumbnailReferenceId, $id, $isRecorded) ?? parent::getMetadata($media, $name));
+      return $this->prepareLocalThumbnailUri($thumbnailReferenceId, $id, $isRecorded) ?? parent::getMetadata($media, $name);
     }
     else {
       return parent::getMetadata($media, $name);
@@ -407,7 +407,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    * Parses data from the source field into an array.
    *
    * @param string $data
-   *   Data from the first item of the source field.
+   *   Value from the first item of the source field.
    * @param array<string, mixed> $parsedData
    *   (output parameter) If parsing was successful, this is an array consisting
    *   of items with the static::VIDEO_DATA_* constants as keys (see the
@@ -526,7 +526,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       $remoteThumbnailUri = $isRecorded ? $this->apiMediator->getDefaultVideoThumbnailUri($videoOrChannelId) : $this->apiMediator->getDefaultChannelThumbnailUri($videoOrChannelId);
     }
     catch (HttpTransferException $e) {
-      $this->logger->warning('A transfer error occured when attempting to download the thumbnail for {videoOrChannel} ID "{id}". Exception chain: {chain}',
+      $this->logger->warning('A transfer error occurred when attempting to download the thumbnail for {videoOrChannel} ID "{id}". Exception chain: {chain}',
         [
           'id' => $videoOrChannelId,
           'videoOrChannel' => $isRecorded ? 'video' : 'channel',
@@ -549,7 +549,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     // Next, determine the local URI by combining the thumbnail directory path
     // with the base file name and the extension.
     $extension = $this->getThumbnailFileExtension($remoteThumbnailUri) ?? static::LOCAL_THUMBNAIL_DEFAULT_EXTENSION;
-    $localUri = $thumbnailsDirectory . DIRECTORY_SEPARATOR . $thumbnailFileNameBase . '.' . $extension;
+    $localUri = ($thumbnailsDirectory . DIRECTORY_SEPARATOR . $thumbnailFileNameBase . '.' . $extension);
     try {
       $thumbnailFileRequestResponse = $this->httpClient->request('GET', $remoteThumbnailUri, [RequestOptions::HTTP_ERRORS => FALSE]);
     }
@@ -598,7 +598,26 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     }
 
     // See if the headers from a HEAD request to the URI yield a MIME type.
-    $contentTypes = $this->httpClient->request('HEAD', $remoteUri)->getHeader('Content-Type');
+    try {
+      $response = $this->httpClient->request('HEAD', $remoteUri);
+    }
+    catch (TransferException $e) {
+      $this->logger->warning('Could not make HEAD request to remote thumbnail URI "{uri}". Message: {message}',
+        [
+          'uri' => $remoteUri,
+          'message' => $e->getMessage(),
+        ]);
+      return NULL;
+    }
+    if ($response->getStatusCode() !== 200) {
+      $this->logger->warning('The HEAD request to remote thumbnail URI "{uri}" returned status code {code} when code 200 was expected.',
+        [
+          'uri' => $remoteUri,
+          'message' => $e->getMessage(),
+        ]);
+      return NULL;
+    }
+    $contentTypes = $response->getHeader('Content-Type');
     if ($contentTypes !== []) {
       // Guess the extension from the first MIME type and use the first of the
       // returned guesses.

@@ -55,7 +55,7 @@ class IbmVideoApiMediator {
       $response = $this->httpClient->request('GET', 'https://api.video.ibm.com/channels/'. rawurlencode($channelId) . '.json', [RequestOptions::HTTP_ERRORS => FALSE]);
     }
     catch (TransferException $e) {
-      throw new HttpTransferException('An internal HTTP error occurred when attempting to get thumbnail URI.', 0, $e);
+      throw new HttpTransferException('An internal HTTP error occurred when attempting to get channel thumbnail URI.', 0, $e);
     }
     $responseCode = $response->getStatusCode();
     if ($responseCode !== 200) {
@@ -69,7 +69,7 @@ class IbmVideoApiMediator {
     // If there is no "thumbnail" key, just return NULL, as one can envision a
     // situation where no such key exists if there is no thumbnail defined
     // (although the documentation, https://developers.video.ibm.com/channel-api-video-management/basic-video-management#success-response),
-    // does not mention such a possibility.
+    // does not mention such a possibility).
     if (!array_key_exists('thumbnail', $responseData)) {
       return NULL;
     }
@@ -84,8 +84,8 @@ class IbmVideoApiMediator {
 
     // Return the "default" thumbnail URI, if it exists. Note that the
     // documentation does not explicitly say to expect the "default" key to
-    // exist (though it does say so for the corresponding case of a video
-    // thumbnail), but experimentation seems to suggest it does...
+    // exist (though it does say so for the corresponding case of a *video*
+    // thumbnail), but experimentation suggests it does...
     if (!array_key_exists('default', $thumbnailSizes)) {
       return NULL;
     }
@@ -117,7 +117,7 @@ class IbmVideoApiMediator {
       $response = $this->httpClient->request('GET', 'https://api.video.ibm.com/videos/'. rawurlencode($videoId) . '.json', [RequestOptions::HTTP_ERRORS => FALSE]);
     }
     catch (TransferException $e) {
-      throw new HttpTransferException('An internal HTTP error occurred when attempting to get thumbnail URI.', 0, $e);
+      throw new HttpTransferException('An internal HTTP error occurred when attempting to get video thumbnail URI.', 0, $e);
     }
     $responseCode = $response->getStatusCode();
     if ($responseCode !== 200) {
@@ -131,7 +131,7 @@ class IbmVideoApiMediator {
     // If there is no "thumbnail" key, just return NULL, as one can envision a
     // situation where no such key exists if there is no thumbnail defined
     // (although the documentation, https://developers.video.ibm.com/channel-api-video-management/basic-video-management#success-response),
-    // does not mention such a possibility.
+    // does not mention such a possibility).
     if (!array_key_exists('thumbnail', $responseData)) {
       return NULL;
     }

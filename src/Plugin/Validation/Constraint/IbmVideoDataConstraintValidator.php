@@ -24,7 +24,7 @@ class IbmVideoDataConstraintValidator extends ConstraintValidator {
    * @param \Drupal\Core\Field\FieldItemListInterface|null $items
    *   The field list corresponding to the "source" field for the media entity,
    *   or NULL if the field list is not available.
-   * @param \Drupal\ibm_video_media_type\Plugin\Validation\Constraint\IbmVideoConfigurationConstraint $constraint
+   * @param \Drupal\ibm_video_media_type\Plugin\Validation\Constraint\IbmVideoDataConstraint $constraint
    *   Constraint.
    *
    * @throws \InvalidArgumentException
