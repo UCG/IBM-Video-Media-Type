@@ -259,8 +259,11 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       }
       return $this->prepareLocalThumbnailUri($thumbnailReferenceId, $id, $isRecorded) ?? parent::getMetadata($media, $name);
     }
-    else {
+    elseif ($name === 'default_name') {
       return parent::getMetadata($media, $name);
+    }
+    else {
+      return NULL;
     }
   }
 
@@ -268,7 +271,10 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    * {@inheritdoc}
    */
   public function getMetadataAttributes() : array {
-    return ['thumbnail_uri' => $this->t('The local thumbnail URI')] + parent::getMetadataAttributes();
+    return [
+      'thumbnail_uri' => $this->t('The local thumbnail URI'),
+      'default_name' => $this->t('The defualt name')
+    ];
   }
 
   /**
