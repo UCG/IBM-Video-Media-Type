@@ -133,6 +133,7 @@ class IbmVideoFormatter extends FormatterBase {
           IbmVideoUrlParameters::WMODE_TRANSPARENT => $this->t('Transparent'),
           IbmVideoUrlParameters::WMODE_WINDOW => $this->t('Window'),
         ],
+        '#required' => FALSE,
       ],
       'default_quality' => [
         '#type' => 'select',
@@ -143,6 +144,7 @@ class IbmVideoFormatter extends FormatterBase {
           IbmVideoUrlParameters::DEFAULT_QUALITY_MEDIUM => $this->t('Medium'),
           IbmVideoUrlParameters::DEFAULT_QUALITY_HIGH => $this->t('High'),
         ],
+        '#required' => FALSE,
       ],
     ];
   }
