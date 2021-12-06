@@ -226,12 +226,12 @@ finish_element_item:
     try {
       return (new IbmVideoUrlParameters())
         ->setDefaultQuality($nonNullIntCasting($this->getSetting('default_quality')))
-        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('display_controls')))
-        ->setDefaultQuality($nonNullIntCasting($this->getSetting('initial_volume')))
-        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('show_title')))
-        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('use_autoplay')))
-        ->setDefaultQuality($nonNullBoolCasting($this->getSetting('use_html5_ui')))
-        ->setDefaultQuality($nonNullIntCasting($this->getSetting('w_mode')));
+        ->setDisplayControlsFlag($nonNullBoolCasting($this->getSetting('display_controls')))
+        ->setInitialVolume($nonNullIntCasting($this->getSetting('initial_volume')))
+        ->setShowTitleFlag($nonNullBoolCasting($this->getSetting('show_title')))
+        ->setUseAutoplayFlag($nonNullBoolCasting($this->getSetting('use_autoplay')))
+        ->setUseHtml5UiFlag($nonNullBoolCasting($this->getSetting('use_html5_ui')))
+        ->setWMode($nonNullIntCasting($this->getSetting('w_mode')));
     }
     catch (\InvalidArgumentException $e) {
       throw new \RuntimeException('A video formatter setting is invalid.', 0, $e);

@@ -207,9 +207,12 @@ class IbmVideoUrlParameters {
    *
    * @param bool $displayControls
    *   A value indicating whether the video playback controls should be shown.
+   *
+   * @return $this
    */
-  public function setDisplayControlsFlag(bool $displayControls) : void {
+  public function setDisplayControlsFlag(bool $displayControls) : IbmVideoUrlParameters {
     $this->displayControls = $displayControls;
+    return $this;
   }
 
   /**
