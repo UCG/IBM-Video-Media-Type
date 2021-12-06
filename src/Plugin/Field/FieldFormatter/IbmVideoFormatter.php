@@ -124,24 +124,24 @@ class IbmVideoFormatter extends FormatterBase {
         '#step' => 1,
       ],
       'w_mode' => [
-        '#type' => 'list',
+        '#type' => 'select',
         '#title' => $this->t('WMode'),
         '#default_value' => $this->prepareSetting('w_mode'),
         '#options' => [
-          IbmVideoUrlParameters::WMODE_DIRECT => 'Direct',
-          IbmVideoUrlParameters::WMODE_OPAQUE => 'Opaque',
-          IbmVideoUrlParameters::WMODE_TRANSPARENT => 'Transparent',
-          IbmVideoUrlParameters::WMODE_WINDOW => 'Window',
+          IbmVideoUrlParameters::WMODE_DIRECT => $this->t('Direct'),
+          IbmVideoUrlParameters::WMODE_OPAQUE => $this->t('Opaque'),
+          IbmVideoUrlParameters::WMODE_TRANSPARENT => $this->t('Transparent'),
+          IbmVideoUrlParameters::WMODE_WINDOW => $this->t('Window'),
         ],
       ],
       'default_quality' => [
-        '#type' => 'list',
+        '#type' => 'select',
         '#title' => $this->t('Default Quality'),
         '#default_value' => $this->prepareSetting('default_quality'),
         '#options' => [
-          IbmVideoUrlParameters::DEFAULT_QUALITY_LOW => 'Low',
-          IbmVideoUrlParameters::DEFAULT_QUALITY_MEDIUM => 'Medium',
-          IbmVideoUrlParameters::DEFAULT_QUALITY_HIGH => 'High',
+          IbmVideoUrlParameters::DEFAULT_QUALITY_LOW => $this->t('Low'),
+          IbmVideoUrlParameters::DEFAULT_QUALITY_MEDIUM => $this->t('Medium'),
+          IbmVideoUrlParameters::DEFAULT_QUALITY_HIGH => $this->t('High'),
         ],
       ],
     ];
