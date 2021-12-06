@@ -141,6 +141,7 @@ EOS
       '#size' => 50,
       '#maxlength' => 120,
       '#pattern' => IbmVideoUrlHelpers::REGEX_EMBED_URL,
+      '#required' => TRUE,
     ];
 
     return $element;
@@ -151,8 +152,8 @@ EOS
    */
   public function massageFormValues(array $values, array $form, FormStateInterface $form_state) : array {
     foreach ($values as $elementKey => &$itemValues) {
-      assert(is_array($itemValues) && isset($itemValues['value']));
-      $url = (string) $itemValues['url'];
+      assert(is_array($itemValues));
+      $url = array_key_exists('url', $itemValues) ? ((string) $itemValues['url']) : '';
       // Unset the "url" element, as it doesn't actually correspond to a field
       // component (it is just used to temporarily store the URL so we can
       // generate the actual field value).
