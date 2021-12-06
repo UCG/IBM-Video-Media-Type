@@ -269,37 +269,37 @@ finish_element_item:
     switch ($settingName) {
       case 'default_quality':
         $preparedValue = $nonNullIntCasting($value);
-        $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isDefaultQualityValid($preparedValue));
+        $invalidSettingConditionalThrowing(!IbmVideoUrlParameters::isDefaultQualityValid($preparedValue));
         return $preparedValue;
 
       case 'display_controls':
         $preparedValue = $nonNullBoolCasting($value);
-        $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isDisplayControlsFlagValid($preparedValue));
+        $invalidSettingConditionalThrowing(!IbmVideoUrlParameters::isDisplayControlsFlagValid($preparedValue));
         return $preparedValue;
 
       case 'initial_volume':
         $preparedValue = $nonNullIntCasting($value);
-        $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isInitialVolumeValid($preparedValue));
+        $invalidSettingConditionalThrowing(!IbmVideoUrlParameters::isInitialVolumeValid($preparedValue));
         return $preparedValue;
 
       case 'show_title':
         $preparedValue = $nonNullBoolCasting($value);
-        $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isShowTitleFlagValid($preparedValue));
+        $invalidSettingConditionalThrowing(!IbmVideoUrlParameters::isShowTitleFlagValid($preparedValue));
         return $preparedValue;
 
       case 'use_autoplay':
         $preparedValue = $nonNullBoolCasting($value);
-        $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isUseAutoplayFlagValid($preparedValue));
+        $invalidSettingConditionalThrowing(!IbmVideoUrlParameters::isUseAutoplayFlagValid($preparedValue));
         return $preparedValue;
 
       case 'use_html5_ui':
         $preparedValue = $nonNullBoolCasting($value);
-        $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isUseHtml5UiFlagValid($preparedValue));
+        $invalidSettingConditionalThrowing(!IbmVideoUrlParameters::isUseHtml5UiFlagValid($preparedValue));
         return $preparedValue;
       
       case 'w_mode':
         $preparedValue = $nonNullIntCasting($value);
-        $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isWModeValid($preparedValue));
+        $invalidSettingConditionalThrowing(!IbmVideoUrlParameters::isWModeValid($preparedValue));
         return $preparedValue;
 
       default:
