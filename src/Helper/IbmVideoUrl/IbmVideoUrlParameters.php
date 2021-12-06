@@ -33,6 +33,13 @@ class IbmVideoUrlParameters {
   public const DEFAULT_QUALITY_MEDIUM = 2;
 
   /**
+   * Code indicating the default quality setting should not be specified.
+   *
+   * @var int
+   */
+  public const DEFAULT_QUALITY_UNSPECIFIED = 4;
+
+  /**
    * Code for the "direct" video WMode setting.
    *
    * @var int
@@ -54,6 +61,13 @@ class IbmVideoUrlParameters {
   public const WMODE_TRANSPARENT = 3;
 
   /**
+   * Code indicating the WMode should not be specified.
+   *
+   * @var int
+   */
+  public const WMODE_UNSPECIFIED = 5;
+
+  /**
    * Code for the "window" video WMode setting.
    *
    * @var int
@@ -61,12 +75,12 @@ class IbmVideoUrlParameters {
   public const WMODE_WINDOW = 4;
 
   /**
-   * Default playback quality (or NULL to not specify).
+   * Default playback quality.
    *
-   * If not NULL, can be one of static::DEFAULT_QUALITY_LOW,
-   * static::DEFAULT_QUALITY_MEDIUM, or static::DEFAULT_QUALITY_HIGH.
+   * One of static::DEFAULT_QUALITY_LOW, static::DEFAULT_QUALITY_MEDIUM,
+   * static::DEFAULT_QUALITY_HIGH, or static::DEFAULT_QUALITY_UNSPECIFIED.
    */
-  private ?int $defaultQuality = NULL;
+  private int $defaultQuality;
 
   /**
    * Whether to show the video player controls.
@@ -94,28 +108,32 @@ class IbmVideoUrlParameters {
   private bool $useHtml5Ui = TRUE;
 
   /**
-   * Default WMode setting (or NULL to not specify).
+   * WMode.
    *
-   * If not NULL, can be one of static::WMODE_DIRECT, static::WMODE_OPAQUE,
-   * static::_WMODE_TRANSPARENT, or static::_WMODE_WINDOW.
+   * One of static::WMODE_DIRECT, static::WMODE_OPAQUE,
+   * static::WMODE_TRANSPARENT, static::WMODE_WINDOW, or
+   * static::WMODE_UNSPECIFIED.
    */
-  private ?int $wMode = NULL;
+  private int $wMode;
 
   /**
    * Creates a default set of reasonable video URL parameters.
    */
   public function __construct() {
+    // We set the default quality and WMode here, as we sadly can't use
+    // "static::" when setting default values for properties in PHP.
+    $this->defaultQuality = static::DEFAULT_QUALITY_UNSPECIFIED;
+    $this->wMode = static::WMODE_UNSPECIFIED;
   }
 
   /**
    * Gets the default quality property.
    *
-   * @return int|null
-   *   NULL if no default quality. Otherwise, one of
-   *   static::DEFAULT_QUALITY_LOW, static::DEFAULT_QUALITY_MEDIUM, or
-   *   static::DEFAULT_QUALITY_HIGH.
+   * @return int
+   *   One of static::DEFAULT_QUALITY_LOW, static::DEFAULT_QUALITY_MEDIUM,
+   *   static::DEFAULT_QUALITY_HIGH, or static::DEFAULT_QUALITY_UNSPECIFIED.
    */
-  public function getDefaultQuality() : ?int {
+  public function getDefaultQuality() : int {
     return $this->defaultQuality;
   }
 
@@ -172,30 +190,29 @@ class IbmVideoUrlParameters {
   /**
    * Gets the WMode property.
    *
-   * @return int|null
-   *   NULL if no WMode. Otherwise, one of static::WMODE_DIRECT,
-   *   static::WMODE_OPAQUE, static::_WMODE_TRANSPARENT, or
-   *   static::_WMODE_WINDOW.
+   * @return int
+   *   One of static::WMODE_DIRECT, static::WMODE_OPAQUE,
+   *   static::_WMODE_TRANSPARENT, static::_WMODE_WINDOW, or
+   *   static::WMODE_UNSPECIFIED.
    */
-  public function getWMode() : ?int {
+  public function getWMode() : int {
     return $this->wMode;
   }
 
   /**
    * Sets the default quality to the provided value.
    *
-   * @param int|null $defaultQuality
-   *   NULL for no default quality. Otherwise, one of
-   *   static::DEFAULT_QUALITY_LOW, static::DEFAULT_QUALITY_MEDIUM, or
-   *   static::DEFAULT_QUALITY_HIGH.
+   * @param int $defaultQuality
+   *   One of static::DEFAULT_QUALITY_LOW, static::DEFAULT_QUALITY_MEDIUM,
+   *   static::DEFAULT_QUALITY_HIGH, or static::DEFAULT_QUALITY_UNSPECIFIED.
    *
    * @return $this
    *
    * @throws \InvalidArgumentException
    *   Thrown if $defaultQuality is not one of the allowed options.
    */
-  public function setDefaultQuality(?int $defaultQuality) : IbmVideoUrlParameters {
-    if ($defaultQuality !== NULL && !static::isDefaultQualityValidInternal($defaultQuality)) {
+  public function setDefaultQuality(int $defaultQuality) : IbmVideoUrlParameters {
+    if (!static::isDefaultQualityValidInternal($defaultQuality)) {
       throw new \InvalidArgumentException('$defaultQualtity is invalid.');
     }
     $this->defaultQuality = $defaultQuality;
@@ -274,18 +291,18 @@ class IbmVideoUrlParameters {
   /**
    * Sets the WMode property.
    *
-   * @param int|null $wMode
-   *   NULL for no WMode. Otherwise, one of static::WMODE_DIRECT,
-   *   static::WMODE_OPAQUE, static::_WMODE_TRANSPARENT, or
-   *   static::_WMODE_WINDOW.
+   * @param int $wMode
+   *   One of static::WMODE_DIRECT, static::WMODE_OPAQUE,
+   *   static::_WMODE_TRANSPARENT, static::_WMODE_WINDOW, or
+   *   static::WMODE_UNSPECIFIED.
    *
    * @return $this
    *
    * @throws \InvalidArgumentException
    *   Thrown if $wMode is not one of the allowed options.
    */
-  public function setWMode(?int $wMode) : IbmVideoUrlParameters {
-    if ($wMode !== NULL && !static::isWModeValidInternal($wMode)) {
+  public function setWMode(int $wMode) : IbmVideoUrlParameters {
+    if (!static::isWModeValidInternal($wMode)) {
       throw new \InvalidArgumentException('$wMode is invalid.');
     }
     $this->wMode = $wMode;
@@ -299,45 +316,47 @@ class IbmVideoUrlParameters {
    *   A query string for use in an embed URL.
    */
   public function toEmbedUrlQueryString() : string {
-    if ($this->defaultQuality !== NULL) {
-      switch ($this->defaultQuality) {
-        case static::DEFAULT_QUALITY_LOW:
-          $defaultQualityStringRep = 'low';
-          break;
+    switch ($this->defaultQuality) {
+      case static::DEFAULT_QUALITY_LOW:
+        $defaultQualityStringRep = 'low';
+        break;
 
-        case static::DEFAULT_QUALITY_MEDIUM:
-          $defaultQualityStringRep = 'medium';
-          break;
+      case static::DEFAULT_QUALITY_MEDIUM:
+        $defaultQualityStringRep = 'medium';
+        break;
 
-        case static::DEFAULT_QUALITY_HIGH:
-          $defaultQualityStringRep = 'high';
-          break;
+      case static::DEFAULT_QUALITY_HIGH:
+        $defaultQualityStringRep = 'high';
+        break;
 
-        default:
-          throw new \RuntimeException('Unexpected default quality.');
-      }
+      case static::DEFAULT_QUALITY_UNSPECIFIED:
+        break;
+
+      default:
+        throw new \RuntimeException('Unexpected default quality.');
     }
-    if ($this->wMode !== NULL) {
-      switch ($this->wMode) {
-        case static::WMODE_DIRECT:
-          $wModeStringRep = 'direct';
-          break;
+    switch ($this->wMode) {
+      case static::WMODE_DIRECT:
+        $wModeStringRep = 'direct';
+        break;
 
-        case static::WMODE_OPAQUE:
-          $wModeStringRep = 'opaque';
-          break;
+      case static::WMODE_OPAQUE:
+        $wModeStringRep = 'opaque';
+        break;
 
-        case static::WMODE_TRANSPARENT:
-          $wModeStringRep = 'transparent';
-          break;
+      case static::WMODE_TRANSPARENT:
+        $wModeStringRep = 'transparent';
+        break;
 
-        case static::WMODE_WINDOW:
-          $wModeStringRep = 'window';
-          break;
+      case static::WMODE_WINDOW:
+        $wModeStringRep = 'window';
+        break;
 
-        default:
-          throw new \RuntimeException('Unexpected WMode.');
-      }
+      case static::WMODE_UNSPECIFIED:
+        break;
+
+      default:
+        throw new \RuntimeException('Unexpected WMode.');
     }
     $trueFalseTextBoolConversion = fn(bool $v) : string => $v ? 'true' : 'false';
     // Note that we use "1"/"0" (instead of "true"/"false") when representing
@@ -349,10 +368,10 @@ class IbmVideoUrlParameters {
       'useAutoplay' => $trueFalseTextBoolConversion($this->useAutoplay),
       'useHtml5Ui' => $this->useHtml5Ui ? '1' : '0',
     ];
-    if ($this->defaultQuality !== NULL) {
+    if ($this->defaultQuality !== static::DEFAULT_QUALITY_UNSPECIFIED) {
       $query['defaultQuality'] = $defaultQualityStringRep;
     }
-    if ($this->wMode !== NULL) {
+    if ($this->wMode !== static::WMODE_UNSPECIFIED) {
       $query['wMode'] = $wModeStringRep;
     }
 
@@ -362,14 +381,14 @@ class IbmVideoUrlParameters {
   /**
    * Tells whether the given default quality is valid.
    *
-   * The default quality is valid if it is either 1) NULL or 2) is of type "int"
-   * and is one of the static::DEFAULT_QUALITY_* values.
+   * The default quality is valid if is of type "int" and is one of the
+   * static::DEFAULT_QUALITY_* values.
    *
    * @param mixed $defaultQuality
    *   Default quality.
    */
   public static function isDefaultQualityValid($defaultQuality) : bool {
-    return ($defaultQuality === NULL || (is_int($defaultQuality) && static::isDefaultQualityValidInternal($defaultQuality))) ? TRUE : FALSE;
+    return (is_int($defaultQuality) && static::isDefaultQualityValidInternal($defaultQuality)) ? TRUE : FALSE;
   }
 
   /**
@@ -436,14 +455,14 @@ class IbmVideoUrlParameters {
   /**
    * Tells whether the given WMode is valid.
    *
-   * The WMode is valid if it is either 1) NULL or 2) is of type "int" and is
-   * one of the static::WMODE_* values.
+   * The WMode is valid if it is of type "int" and is one of the
+   * static::WMODE_* values.
    *
    * @param mixed $wMode
    *   WMode.
    */
   public static function isWModeValid($wMode) : bool {
-    return ($wMode === NULL || (is_int($wMode) && static::isWModeValidInternal($wMode))) ? TRUE : FALSE;
+    return (is_int($wMode) && static::isWModeValidInternal($wMode)) ? TRUE : FALSE;
   }
 
   /**
@@ -460,6 +479,7 @@ class IbmVideoUrlParameters {
       case static::DEFAULT_QUALITY_LOW:
       case static::DEFAULT_QUALITY_MEDIUM:
       case static::DEFAULT_QUALITY_HIGH:
+      case static::DEFAULT_QUALITY_UNSPECIFIED:
         return TRUE;
 
       default:
@@ -493,6 +513,7 @@ class IbmVideoUrlParameters {
       case static::WMODE_OPAQUE:
       case static::WMODE_TRANSPARENT:
       case static::WMODE_WINDOW:
+      case static::WMODE_UNSPECIFIED:
         return TRUE;
 
       default:

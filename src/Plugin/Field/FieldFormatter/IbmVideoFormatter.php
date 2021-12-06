@@ -122,6 +122,7 @@ class IbmVideoFormatter extends FormatterBase {
         '#min' => 0,
         '#max' => 100,
         '#step' => 1,
+        '#required' => TRUE,
       ],
       'w_mode' => [
         '#type' => 'select',
@@ -132,8 +133,9 @@ class IbmVideoFormatter extends FormatterBase {
           IbmVideoUrlParameters::WMODE_OPAQUE => $this->t('Opaque'),
           IbmVideoUrlParameters::WMODE_TRANSPARENT => $this->t('Transparent'),
           IbmVideoUrlParameters::WMODE_WINDOW => $this->t('Window'),
+          IbmVideoUrlParameters::WMODE_UNSPECIFIED => $this->t('Unspecified'),
         ],
-        '#required' => FALSE,
+        '#required' => TRUE,
       ],
       'default_quality' => [
         '#type' => 'select',
@@ -143,8 +145,9 @@ class IbmVideoFormatter extends FormatterBase {
           IbmVideoUrlParameters::DEFAULT_QUALITY_LOW => $this->t('Low'),
           IbmVideoUrlParameters::DEFAULT_QUALITY_MEDIUM => $this->t('Medium'),
           IbmVideoUrlParameters::DEFAULT_QUALITY_HIGH => $this->t('High'),
+          IbmVideoUrlParameters::DEFAULT_QUALITY_UNSPECIFIED => $this->t('Unspecified'),
         ],
-        '#required' => FALSE,
+        '#required' => TRUE,
       ],
     ];
   }

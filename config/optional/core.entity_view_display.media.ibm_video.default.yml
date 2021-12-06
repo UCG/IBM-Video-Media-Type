@@ -15,14 +15,7 @@ content:
     type: ibm_video
     label: visually_hidden
     weight: 1
-    settings:
-      use_autoplay: false
-      use_html5_ui: true
-      display_controls: true
-      initial_volume: 50
-      show_title: true
-      w_mode: null
-      default_quality: null
+    settings: {}
     third_party_settings: {}
     region: content
 hidden:
