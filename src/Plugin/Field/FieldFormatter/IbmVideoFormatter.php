@@ -266,7 +266,7 @@ finish_element_item:
     };
     $nonNullBoolCasting = fn ($x) => $x === NULL ? NULL : (bool) $x;
     $nonNullIntCasting = fn ($x) => $x === NULL ? NULL : (int) $x;
-    switch ($value) {
+    switch ($settingName) {
       case 'default_quality':
         $preparedValue = $nonNullIntCasting($value);
         $invalidSettingConditionalThrowing(IbmVideoUrlParameters::isDefaultQualityValid($preparedValue));
