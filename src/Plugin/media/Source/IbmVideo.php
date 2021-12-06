@@ -273,7 +273,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   public function getMetadataAttributes() : array {
     return [
       'thumbnail_uri' => $this->t('The local thumbnail URI'),
-      'default_name' => $this->t('The defualt name')
+      'default_name' => $this->t('The defualt name'),
     ];
   }
 
