@@ -123,7 +123,6 @@ class IbmVideoWidget extends WidgetBase {
         $thumbnailReferenceId = NULL;
       }
     }
-    $element['#custom']['thumbnail_reference_id'] = $thumbnailReferenceId;
     $element['url'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Embed URL'),
@@ -140,7 +139,14 @@ EOS
       '#default_value' => $defaultVideoUrl,
       '#size' => 50,
       '#maxlength' => 120,
+      '#custom' => ['thumbnail_reference_id' => $thumbnailReferenceId],
       '#required' => TRUE,
+      '#element_validate' => [function (array &$element, FormStateInterface &$formState) : void {
+        $url = (string) $formState->getValue('url');
+        if ($url !== '' && !static::isEmbedUrlValid($url, $formState)) {
+          $formState->setErrorByName('url', 'URL is not in the required format.');
+        }
+      }],
     ];
 
     return $element;
@@ -166,20 +172,13 @@ EOS
         // before the input-level-element validation handlers have been called.
         // This means we cannot assume that $url is valid. It also seems
         // possible that Drupal could change this behavior in the future, and
-        // have the input-level-element handlers be called first. To cover both
-        // cases, we use the #custom -> is_url_valid value to store the
-        // validation result, if the We will thus perform
-        // the validation here, and set the field value to a harmless NULL if
-        // validation fails. To avoid repeating the validation step, we will
-        // record the validation result in the "#custom" form element property,
-        // and our custom element-level validator for the URL field will read
-        // from this to determine, if possible, whether the field is valid. This
-        // is why we don't just use, e.g., the "#pattern" property to perform
-        // URL validation. This is something that Drupal should fix...
-        // @todo: Do this differently! Probably use $form_state along w/
-        // something indicating which URL was validated, just to be safe...
-        if (IbmVideoUrlHelpers::isEmbedUrlValid($url)) {
-          $form[$elementKey]['#custom']['is_url_valid'] = TRUE;
+        // have the input-level-element handlers be called first. To ensure
+        // the validation is reliable, and also try to minimize any repeated
+        // validation, we store the validation result for a given URL (along w/
+        // the URL) in the $form_state. We then check this cached validation
+        // result here and in the input-level-element handler to see if we have
+        // to repeat the validation.
+        if (static::isEmbedUrlValid($url, $form_state)) {
           $id = '';
           $isRecorded = FALSE;
           IbmVideoUrlHelpers::parseEmbedUrl($url, $id, $isRecorded);
@@ -190,7 +189,8 @@ EOS
           $itemValues['value'] = $this->source->prepareVideoData($id, $isRecorded, $thumbnailReferenceId);
         }
         else {
-          $form[$elementKey]['#custom']['is_url_valid'] = FALSE;
+          // Set the field value to a harmless NULL.
+          $itemValues['value'] = NULL;
         }
       }
     }
@@ -276,6 +276,33 @@ EOS
    */
   public static function isApplicable(FieldDefinitionInterface $field_definition) : bool {
     return MediaSourceFieldHelpers::doesFieldDefinitionHaveIbmVideoMediaSource($field_definition);
+  }
+
+  /**
+   * Tells whether the given embed URL is valid.
+   *
+   * If the validation result for the given embed URL is cached in the form
+   * state, returns the cached result. Otherwise, validates the URL and stores
+   * (in $formState) and returns the result.
+   *
+   * @param string $embedUrl
+   *   Embed URL.
+   * @param \Drupal\Core\Form\FormStateInterface $formState
+   *   Form state where the URL validation state cache is located.
+   */
+  private static function isEmbedUrlValid(string $embedUrl, FormStateInterface $formState) : bool {
+    // Use the cached result if possible.
+    if ($formState->has('ibm_video_media_type_url_validity')) {
+      $validationResult = $formState->get('ibm_video_media_type_url_validity');
+      assert(is_array($validationResult));
+      if ($validationResult['url'] === $embedUrl) {
+        return $validationResult['validity'];
+      }
+    }
+    // Otherwise, perform the validation and dump the result into the cache.
+    $isValid = IbmVideoUrlHelpers::isEmbedUrlValid($embedUrl);
+    $formState->set('ibm_video_media_type_url_validity', ['url' => $embedUrl, 'validity' => $isValid]);
+    return $isValid;
   }
 
 }
