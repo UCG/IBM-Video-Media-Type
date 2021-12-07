@@ -167,17 +167,12 @@ EOS
         $itemValues['value'] = NULL;
       }
       else {
-        // This is tricky, because massageFormValues() is called during the
-        // *validation* phase of e.g., submitting the "add media" form, and
-        // before the input-level-element validation handlers have been called.
-        // This means we cannot assume that $url is valid. It also seems
-        // possible that Drupal could change this behavior in the future, and
-        // have the input-level-element handlers be called first. To ensure
-        // the validation is reliable, and also try to minimize any repeated
-        // validation, we store the validation result for a given URL (along w/
-        // the URL) in the $form_state. We then check this cached validation
-        // result here and in the input-level-element handler to see if we have
-        // to repeat the validation.
+        // $url might not be valid, and we want to make sure we set the field
+        // value to a harmless 'NULL' if that is the case. We don't want to
+        // re-validate if it isn't necessary, on the other hand. Hence, we store
+        // the validation result for a given URL (along w/ the URL) in the
+        // $form_state. We then check this cached validation result (if it
+        // exists) here.
         if (static::isEmbedUrlValid($url, $form_state)) {
           $id = '';
           $isRecorded = FALSE;
@@ -189,7 +184,6 @@ EOS
           $itemValues['value'] = $this->source->prepareVideoData($id, $isRecorded, $thumbnailReferenceId);
         }
         else {
-          // Set the field value to a harmless NULL.
           $itemValues['value'] = NULL;
         }
       }
