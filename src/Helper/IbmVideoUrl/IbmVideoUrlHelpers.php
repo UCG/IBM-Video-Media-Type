@@ -110,6 +110,39 @@ final class IbmVideoUrlHelpers {
   }
 
   /**
+   * Tells whether the given embed URL is valid.
+   *
+   * The embed URL is valid if it:
+   * 1) starts with "http://", "https://", "//", or an empty string (""), and
+   * 2) then continues with "video.ibm.com/embed/", and
+   * 3) optionally then continues with "recorded/", and
+   * 4) then continues with at least one URL-path-segment-valid characters, and
+   * 5) optionally then continues with "?" followed by a valid query string, and
+   * 6) optionally finishes with "#" followed by a valid fragment.
+   * Another way to see if the URL is valid is by comparing it with the
+   * static::REGEX_EMBED_URL regular expression -- the URL is valid if the
+   * entire URL matches the expression.
+   *
+   * @param string $embedUrl
+   *   Embed URL.
+   */
+  public static function isEmbedUrlValid(string $embedUrl) : bool {
+    // We use parentheses for delimiters to avoid having to escape stuff in
+    // REGEX_EMBED_URL.
+    return (preg_match('(^' . static::REGEX_EMBED_URL . '$)', $embedUrl) === 1) ? TRUE : FALSE;
+  }
+
+  /**
+   * Tells whether the given video or channel ID is valid (non-empty).
+   *
+   * @param string $id
+   *   Video or channel ID.
+   */
+  public static function isVideoOrChannelIdValid(string $id) : bool {
+    return $id === '' ? FALSE : TRUE;
+  }
+
+  /**
    * Extracts the video/channel ID and recorded/streamed info from an embed URL.
    *
    * @param string $embedUrl
@@ -150,16 +183,6 @@ final class IbmVideoUrlHelpers {
       $encodedId = static::getSubstringUpTo(0, $remainder, '?');
     }
     $id = urldecode($encodedId);
-  }
-
-  /**
-   * Tells whether the given video or channel ID is valid (non-empty).
-   *
-   * @param string $id
-   *   Video or channel ID.
-   */
-  public static function isVideoOrChannelIdValid(string $id) : bool {
-    return $id === '' ? FALSE : TRUE;
   }
 
   /**

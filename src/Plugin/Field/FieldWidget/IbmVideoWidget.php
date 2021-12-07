@@ -123,7 +123,7 @@ class IbmVideoWidget extends WidgetBase {
         $thumbnailReferenceId = NULL;
       }
     }
-    $element['#custom'] = ['thumbnail_reference_id' => $thumbnailReferenceId];
+    $element['#custom']['thumbnail_reference_id'] = $thumbnailReferenceId;
     $element['url'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Embed URL'),
@@ -140,7 +140,6 @@ EOS
       '#default_value' => $defaultVideoUrl,
       '#size' => 50,
       '#maxlength' => 120,
-      '#pattern' => IbmVideoUrlHelpers::REGEX_EMBED_URL,
       '#required' => TRUE,
     ];
 
@@ -162,14 +161,37 @@ EOS
         $itemValues['value'] = NULL;
       }
       else {
-        $id = '';
-        $isRecorded = FALSE;
-        IbmVideoUrlHelpers::parseEmbedUrl($url, $id, $isRecorded);
-        // Set the field value in correspondence with the ID, "is recorded"
-        // flag, and the thumbnail reference ID we set earlier.
-        $thumbnailReferenceId = $form[$elementKey]['#custom'];
-        assert(is_null($thumbnailReferenceId) || $this->source->isThumbnailReferenceIdValid($thumbnailReferenceId));
-        $itemValues['value'] = $this->source->prepareVideoData($id, $isRecorded, $thumbnailReferenceId);
+        // This is tricky, because massageFormValues() is called during the
+        // *validation* phase of e.g., submitting the "add media" form, and
+        // before the input-level-element validation handlers have been called.
+        // This means we cannot assume that $url is valid. It also seems
+        // possible that Drupal could change this behavior in the future, and
+        // have the input-level-element handlers be called first. To cover both
+        // cases, we use the #custom -> is_url_valid value to store the
+        // validation result, if the We will thus perform
+        // the validation here, and set the field value to a harmless NULL if
+        // validation fails. To avoid repeating the validation step, we will
+        // record the validation result in the "#custom" form element property,
+        // and our custom element-level validator for the URL field will read
+        // from this to determine, if possible, whether the field is valid. This
+        // is why we don't just use, e.g., the "#pattern" property to perform
+        // URL validation. This is something that Drupal should fix...
+        // @todo: Do this differently! Probably use $form_state along w/
+        // something indicating which URL was validated, just to be safe...
+        if (IbmVideoUrlHelpers::isEmbedUrlValid($url)) {
+          $form[$elementKey]['#custom']['is_url_valid'] = TRUE;
+          $id = '';
+          $isRecorded = FALSE;
+          IbmVideoUrlHelpers::parseEmbedUrl($url, $id, $isRecorded);
+          // Set the field value in correspondence with the ID, "is recorded"
+          // flag, and the thumbnail reference ID we set earlier.
+          $thumbnailReferenceId = $form[$elementKey]['#custom']['thumbnail_reference_id'];
+          assert(is_null($thumbnailReferenceId) || $this->source->isThumbnailReferenceIdValid($thumbnailReferenceId));
+          $itemValues['value'] = $this->source->prepareVideoData($id, $isRecorded, $thumbnailReferenceId);
+        }
+        else {
+          $form[$elementKey]['#custom']['is_url_valid'] = FALSE;
+        }
       }
     }
 
