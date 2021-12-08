@@ -142,7 +142,7 @@ EOS
       '#custom' => ['thumbnail_reference_id' => $thumbnailReferenceId],
       '#required' => TRUE,
       '#element_validate' => [function (array &$element, FormStateInterface &$formState) : void {
-        $url = (string) $formState->getValue('url');
+        $url = (string) $formState->getValue($element['#parents']);
         if ($url !== '' && !static::isEmbedUrlValid($url, $formState)) {
           $formState->setErrorByName('url', 'URL is not in the required format.');
         }
