@@ -26,9 +26,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class IbmVideoWidget extends WidgetBase {
 
   /**
-   * A sample embed URL, or NULL the variable is not yet set.
+   * A sample embed URL.
    */
-  private static ?string $sampleEmbedUrl;
+  private static string $sampleEmbedUrl;
 
   /**
    * Video source associated with this widget.
@@ -284,7 +284,7 @@ EOS
    * Gets a generic, sample embed URL.
    */
   private static function getSampleEmbedUrl() : string {
-    if (static::$sampleEmbedUrl === NULL) {
+    if (!isset(static::$sampleEmbedUrl)) {
       static::$sampleEmbedUrl = IbmVideoUrlHelpers::assembleEmbedUrl('12345', FALSE, '');
     }
     return static::$sampleEmbedUrl;
