@@ -26,11 +26,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class IbmVideoWidget extends WidgetBase {
 
   /**
-   * A sample embed URL.
-   */
-  private static string $sampleEmbedUrl;
-
-  /**
    * Video source associated with this widget.
    */
   private IbmVideo $source;
@@ -170,8 +165,8 @@ EOS
       unset($itemValues[$url]);
       if ($url === '') {
         // We will end up with an entity validation error if we give an empty
-        // value, so we just use a valid sample embed URL.
-        $itemValues['value'] = static::getSampleEmbedUrl();
+        // value, so we just use some valid sample data.
+        $itemValues['value'] = $this->getSampleVideoData();
       }
       else {
         // $url might not be valid, and we want to make sure we set the field
@@ -192,7 +187,7 @@ EOS
         }
         else {
           // See earlier comment...
-          $itemValues['value'] = static::getSampleEmbedUrl();
+          $itemValues['value'] = $this->getSampleVideoData();
         }
       }
     }
@@ -216,6 +211,13 @@ EOS
       return NULL;
     }
     return IbmVideoUrlHelpers::assembleEmbedUrl($id, $isRecorded, '');
+  }
+
+  /**
+   * Gets a generic sample video data string.
+   */
+  private function getSampleVideoData() : string {
+    return $this->source->prepareVideoData('123456', FALSE, NULL);
   }
 
   /**
@@ -278,16 +280,6 @@ EOS
    */
   public static function isApplicable(FieldDefinitionInterface $field_definition) : bool {
     return MediaSourceFieldHelpers::doesFieldDefinitionHaveIbmVideoMediaSource($field_definition);
-  }
-
-  /**
-   * Gets a generic, sample embed URL.
-   */
-  private static function getSampleEmbedUrl() : string {
-    if (!isset(static::$sampleEmbedUrl)) {
-      static::$sampleEmbedUrl = IbmVideoUrlHelpers::assembleEmbedUrl('12345', FALSE, '');
-    }
-    return static::$sampleEmbedUrl;
   }
 
   /**
