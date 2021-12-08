@@ -26,6 +26,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class IbmVideoWidget extends WidgetBase {
 
   /**
+   * A sample embed URL, or NULL the variable is not yet set.
+   */
+  private static ?string $sampleEmbedUrl;
+
+  /**
    * Video source associated with this widget.
    */
   private IbmVideo $source;
@@ -144,7 +149,7 @@ EOS
       '#element_validate' => [function (array &$element, FormStateInterface &$formState) : void {
         $url = (string) $formState->getValue($element['#parents']);
         if ($url !== '' && !static::isEmbedUrlValid($url, $formState)) {
-          $formState->setErrorByName('url', 'URL is not in the required format.');
+          $formState->setErrorByName('url', 'Embed URL is not in the required format.');
         }
       }],
     ];
@@ -164,13 +169,15 @@ EOS
       // generate the actual field value).
       unset($itemValues[$url]);
       if ($url === '') {
-        $itemValues['value'] = NULL;
+        // We will end up with an entity validation error if we give an empty
+        // value, so we just use a valid sample embed URL.
+        $itemValues['value'] = static::getSampleEmbedUrl();
       }
       else {
         // $url might not be valid, and we want to make sure we set the field
-        // value to a harmless 'NULL' if that is the case. We don't want to
-        // re-validate if it isn't necessary, on the other hand. Hence, we store
-        // the validation result for a given URL (along w/ the URL) in the
+        // value to a harmless empty string if that is the case. We don't want
+        // to re-validate if it isn't necessary, on the other hand. Hence, we
+        // store the validation result for a given URL (along w/ the URL) in the
         // $form_state. We then check this cached validation result (if it
         // exists) here.
         if (static::isEmbedUrlValid($url, $form_state)) {
@@ -184,7 +191,8 @@ EOS
           $itemValues['value'] = $this->source->prepareVideoData($id, $isRecorded, $thumbnailReferenceId);
         }
         else {
-          $itemValues['value'] = NULL;
+          // See earlier comment...
+          $itemValues['value'] = static::getSampleEmbedUrl();
         }
       }
     }
@@ -270,6 +278,16 @@ EOS
    */
   public static function isApplicable(FieldDefinitionInterface $field_definition) : bool {
     return MediaSourceFieldHelpers::doesFieldDefinitionHaveIbmVideoMediaSource($field_definition);
+  }
+
+  /**
+   * Gets a generic, sample embed URL.
+   */
+  private static function getSampleEmbedUrl() : string {
+    if (static::$sampleEmbedUrl === NULL) {
+      static::$sampleEmbedUrl = IbmVideoUrlHelpers::assembleEmbedUrl('12345', FALSE, '');
+    }
+    return static::$sampleEmbedUrl;
   }
 
   /**

@@ -708,7 +708,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *   New thumbnail reference ID (base-64 encoding of eight cryptographically
    *   random bytes).
    */
-  public static function generateThumbnailReferenceId() : string {
+  private static function generateThumbnailReferenceId() : string {
     return base64_encode(random_bytes(8));
   }
 
