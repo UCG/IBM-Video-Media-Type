@@ -236,7 +236,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       if (!$this->isVideoOrChannelIdValid($id) || !$this->isIsRecordedFlagValid($isRecorded) || !$this->isThumbnailReferenceIdValid($thumbnailReferenceId)) {
         return parent::getMetadata($media, $name);
       }
-      return $this->prepareLocalThumbnailUri($thumbnailReferenceId, $id, $isRecorded) ?? parent::getMetadata($media, $name);
+      return $this->prepareLocalThumbnailUri($thumbnailReferenceId, $isRecorded, $id) ?? parent::getMetadata($media, $name);
     }
     elseif ($name === 'default_name') {
       return parent::getMetadata($media, $name);
