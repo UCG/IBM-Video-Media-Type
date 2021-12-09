@@ -12,6 +12,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\ibm_video_media_type\Helper\IbmVideoUrl\IbmVideoUrlHelpers;
 use Drupal\ibm_video_media_type\Helper\MediaSourceFieldHelpers;
 use Drupal\ibm_video_media_type\Plugin\media\Source\IbmVideo;
+use Ranine\Helper\StringHelpers;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -123,6 +124,13 @@ class IbmVideoWidget extends WidgetBase {
         $thumbnailReferenceId = NULL;
       }
     }
+    // Create a "fake" element for the thumbnail reference ID, that is processed
+    // in order to set the ID as a submitted form "value."
+    $element['thumbnail_reference_id'] = [
+      '#process' => [function (array &$element, FormStateInterface &$formState) use ($thumbnailReferenceId) : void {
+        $formState->setValueForElement($element, $thumbnailReferenceId);
+      }],
+    ];
     $element['url'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Embed URL'),
@@ -156,12 +164,13 @@ EOS
    * {@inheritdoc}
    */
   public function massageFormValues(array $values, array $form, FormStateInterface $form_state) : array {
-    foreach ($values as $elementKey => &$itemValues) {
+    foreach ($values as $delta => &$itemValues) {
       assert(is_array($itemValues));
       $url = array_key_exists('url', $itemValues) ? ((string) $itemValues['url']) : '';
-      // Unset the "url" element, as it doesn't actually correspond to a field
-      // component (it is just used to temporarily store the URL so we can
-      // generate the actual field value).
+      $thumbnailReferenceId = $values['thumbnail_reference_id'];
+      // Unset the "url" and "thumbnail_reference_id" elements, as they don't
+      // actually correspond to field components (it they are just used to
+      // temporarily store values so we can generate the actual field value).
       unset($itemValues[$url]);
       if ($url === '') {
         // We will end up with an entity validation error if we give an empty
@@ -181,8 +190,7 @@ EOS
           IbmVideoUrlHelpers::parseEmbedUrl($url, $id, $isRecorded);
           // Set the field value in correspondence with the ID, "is recorded"
           // flag, and the thumbnail reference ID we set earlier.
-          $thumbnailReferenceId = $form[$elementKey]['#custom']['thumbnail_reference_id'];
-          assert(is_null($thumbnailReferenceId) || $this->source->isThumbnailReferenceIdValid($thumbnailReferenceId));
+          assert($thumbnailReferenceId === NULL || $this->source->isThumbnailReferenceIdValid($thumbnailReferenceId));
           $itemValues['value'] = $this->source->prepareVideoData($id, $isRecorded, $thumbnailReferenceId);
         }
         else {
