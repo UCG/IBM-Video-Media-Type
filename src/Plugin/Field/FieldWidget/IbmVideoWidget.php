@@ -229,7 +229,7 @@ EOS
    * Gets a generic sample video data string.
    */
   private function getSampleVideoData() : string {
-    return $this->source->prepareVideoData('123456', FALSE, NULL);
+    return $this->source->prepareVideoData('123456', FALSE, 'ABCDE');
   }
 
   /**
