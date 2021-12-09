@@ -348,9 +348,9 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    * @param bool $isRecordedFlag
    *   Flag indicating whether the video is recorded (TRUE) or a stream (FALSE).
    * @param string $thumbnailReferenceId
-   *   ID which corresponds to the cached thumbnail filename for this video.
-   *   This ID can be altered if it is desirable to invalidate a previously
-   *   cached thumbnail. It is recommended to use
+   *   ID (non-empty ASCII string) which corresponds to the cached thumbnail
+   *   filename for this video. This ID can be altered if it is desirable to
+   *   invalidate a previously cached thumbnail. It is recommended to use
    *   static::getFreshThumbnailReferenceId() to generate a thumbnail reference
    *   ID, unless purposely re-using an old ID.
    *
@@ -674,11 +674,11 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    * Generates a random thumbnail reference ID.
    *
    * @return string
-   *   New thumbnail reference ID (a binary string consisting of eight
+   *   New thumbnail reference ID (the base-64 encoding of eight
    *   cryptographically random bytes).
    */
   public static function generateFreshThumbnailReferenceId() : string {
-    return random_bytes(8);
+    return base64_encode(random_bytes(8));
   }
 
 }
