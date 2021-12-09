@@ -209,11 +209,12 @@ final class IbmVideoUrlHelpers {
     if ($needlePosition === FALSE) {
       throw new \InvalidArgumentException('$needle does not exist in $haystack.');
     }
-    if ($needlePosition === (strlen($haystack) - 1)) {
+    $positionAfterNeedle = $needlePosition + strlen($needle);
+    if ($positionAfterNeedle === strlen($haystack)) {
       return '';
     }
     else {
-      return substr($haystack, $needlePosition + 1);
+      return substr($haystack, $positionAfterNeedle);
     }
   }
 
