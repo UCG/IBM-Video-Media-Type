@@ -99,35 +99,42 @@ class IbmVideoWidget extends WidgetBase {
       throw new \InvalidArgumentException('$delta is not an integer.');
     }
 
+    // Generate a default video URL from any existing video data. Also store any
+    // current thumbnail reference ID (for use below).
     $videoData = $this->getVideoData($items, $delta);
-    // We will need the thumbnail reference ID later, when we generate the
-    // source field value after submission in massageFormValues(). Since that
-    // method does not receive something that can retrieve the media entity
-    // and/or its associated source field, we'll try to retrieve the thumbnail
-    // reference ID here and store it in the '#custom' property. We'll also go
-    // ahead and obtain the default video URL.
     if ($videoData === NULL) {
       $defaultVideoUrl = NULL;
-      $thumbnailReferenceId = NULL;
+      $currentThumbnailReferenceId = NULL;
     }
     else {
       $defaultVideoUrl = $this->getDefaultVideoUrl($videoData);
       if (array_key_exists(IbmVideo::VIDEO_DATA_THUMBNAIL_REFERENCE_ID_PROPERTY_NAME, $videoData)) {
-        $thumbnailReferenceId = $videoData[IbmVideo::VIDEO_DATA_THUMBNAIL_REFERENCE_ID_PROPERTY_NAME];
-        if (!$this->source->isThumbnailReferenceIdValid($thumbnailReferenceId)) {
+        $currentThumbnailReferenceId = $videoData[IbmVideo::VIDEO_DATA_THUMBNAIL_REFERENCE_ID_PROPERTY_NAME];
+        if (!$this->source->isThumbnailReferenceIdValid($currentThumbnailReferenceId)) {
           // Don't use the thumbnail reference ID if it's invalid.
-          $thumbnailReferenceId = NULL;
+          $currentThumbnailReferenceId = NULL;
         }
       }
       else {
-        $thumbnailReferenceId = NULL;
+        $currentThumbnailReferenceId = NULL;
       }
     }
     // Create a "fake" element for the thumbnail reference ID, that is processed
     // in order to set the ID as a submitted form "value."
     $element['thumbnail_reference_id'] = [
-      '#process' => [function (array &$element, FormStateInterface &$formState) use ($thumbnailReferenceId) : void {
-        $formState->setValueForElement($element, $thumbnailReferenceId);
+      '#process' => [function (array &$element, FormStateInterface &$formState) use ($defaultVideoUrl, $currentThumbnailReferenceId) : void {
+        $urlElementPath = $element['#parents'];
+        array_pop($urlElementPath);
+        array_push($urlElementPath, 'url');
+        // Generate a new thumbnail reference ID for a new URL, in order to
+        // invalidate any cached thumbnail. Also generate a new ID if no old ID
+        // exists. Otherwise, use the old ID.
+        if (isset($currentThumbnailReferenceId) && $formState->getValue($urlElementPath) === $defaultVideoUrl) {
+          $formState->setValueForElement($element, $currentThumbnailReferenceId);
+        }
+        else {
+          $formState->setValueForElement($element, IbmVideo::generateFreshThumbnailReferenceId());
+        }
       }],
     ];
     $element['url'] = [
@@ -146,7 +153,6 @@ EOS
       '#default_value' => $defaultVideoUrl,
       '#size' => 50,
       '#maxlength' => 120,
-      '#custom' => ['thumbnail_reference_id' => $thumbnailReferenceId],
       '#required' => TRUE,
       '#element_validate' => [function (array &$element, FormStateInterface &$formState) : void {
         $url = (string) $formState->getValue($element['#parents']);
@@ -178,7 +184,7 @@ EOS
         $itemValues['value'] = $this->getSampleVideoData();
       }
       else {
-        // $url might not be valid, but we don't want to re-validate it if not
+        // $url might not be valid, but we don't want to re-validate if it isn't
         // necessary. Hence, we store the validation result for a given URL
         // (along w/ the URL) in the $form_state. We then check this cached
         // validation result (if it exists) here.
@@ -188,7 +194,7 @@ EOS
           IbmVideoUrlHelpers::parseEmbedUrl($url, $id, $isRecorded);
           // Set the field value in correspondence with the ID, "is recorded"
           // flag, and the thumbnail reference ID we set earlier.
-          assert($thumbnailReferenceId === NULL || $this->source->isThumbnailReferenceIdValid($thumbnailReferenceId));
+          assert($this->source->isThumbnailReferenceIdValid($thumbnailReferenceId));
           $itemValues['value'] = $this->source->prepareVideoData($id, $isRecorded, $thumbnailReferenceId);
         }
         else {

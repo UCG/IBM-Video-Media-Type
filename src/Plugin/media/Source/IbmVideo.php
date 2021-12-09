@@ -88,32 +88,11 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   private const LOCAL_THUMBNAIL_DEFAULT_EXTENSION = 'unknown';
 
   /**
-   * The separator between parts of a local thumbnail filename.
+   * The prefix for a local thumbnail filename.
    *
    * @var string
    */
-  private const LOCAL_THUMBNAIL_FILENAME_PART_SEPARATOR = '_';
-
-  /**
-   * The prefix for local thumbnail filename.
-   *
-   * @var string
-   */
-  private const LOCAL_THUMBNAIL_FILENAME_PREFIX = 'thumbnail';
-
-  /**
-   * The "recorded video" identifier for use in a local thumbnail filename.
-   *
-   * @var string
-   */
-  private const LOCAL_THUMBNAIL_FILENAME_RECORDED_IDENTIFIER = 'r';
-
-  /**
-   * The "streamed video" identifier for use in a local thumbnail filename.
-   *
-   * @var string
-   */
-  private const LOCAL_THUMBNAIL_FILENAME_STREAM_IDENTIFIER = 's';
+  private const LOCAL_THUMBNAIL_FILENAME_PREFIX = 'thumbnail_';
 
   /**
    * IBM video API mediator.
@@ -368,29 +347,27 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    *   The video (for recorded videos) or channel (for streams) ID.
    * @param bool $isRecordedFlag
    *   Flag indicating whether the video is recorded (TRUE) or a stream (FALSE).
-   * @param string|null $currentThumbnailReferenceId
-   *   Current thumbnail reference ID, or NULL if none exists.
+   * @param string $thumbnailReferenceId
+   *   ID which corresponds to the cached thumbnail filename for this video.
+   *   This ID can be altered if it is desirable to invalidate a previously
+   *   cached thumbnail. It is recommended to use
+   *   static::getFreshThumbnailReferenceId() to generate a thumbnail reference
+   *   ID, unless purposely re-using an old ID.
    *
    * @return string
    *   Source field value generated from the function arguments.
    *
    * @throws \InvalidArgumentException
-   *   Thrown if $videoOrChannelId or $currentThumbnailReferenceId is empty.
+   *   Thrown if $videoOrChannelId or $thumbnailReferenceId is empty.
    */
-  public function prepareVideoData(string $videoOrChannelId, bool $isRecordedFlag, ?string $currentThumbnailReferenceId) : string {
+  public function prepareVideoData(string $videoOrChannelId, bool $isRecordedFlag, string $thumbnailReferenceId) : string {
     ThrowHelpers::throwIfEmptyString($videoOrChannelId, 'videoOrChannelId');
-    // Generate a random thumbnail reference ID if none exists.
-    if ($currentThumbnailReferenceId === NULL) {
-      $currentThumbnailReferenceId = static::generateThumbnailReferenceId();
-    }
-    else {
-      ThrowHelpers::throwIfEmptyString($currentThumbnailReferenceId, 'currentThubmanilReferenceId');
-    }
+    ThrowHelpers::throwIfEmptyString($thumbnailReferenceId, 'thumbnailReferenceId');
 
     return json_encode([
       static::VIDEO_DATA_ID_PROPERTY_NAME => $videoOrChannelId,
       static::VIDEO_DATA_RECORDED_FLAG_PROPERTY_NAME => $isRecordedFlag,
-      static::VIDEO_DATA_THUMBNAIL_REFERENCE_ID_PROPERTY_NAME => $currentThumbnailReferenceId,
+      static::VIDEO_DATA_THUMBNAIL_REFERENCE_ID_PROPERTY_NAME => $thumbnailReferenceId,
     ]);
   }
 
@@ -506,16 +483,8 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       throw new \RuntimeException('Could not prepare a writable thumbnails directory.');
     }
 
-    // The thumbnail file name (sans extension) is chosen to be unique for a
-    // given video/media entity combination (because the thumbnail reference IDs
-    // of different media entities should be different).
     $thumbnailFileNameBase = static::LOCAL_THUMBNAIL_FILENAME_PREFIX
-      . static::LOCAL_THUMBNAIL_FILENAME_PART_SEPARATOR
-      . sha1($thumbnailReferenceId)
-      . static::LOCAL_THUMBNAIL_FILENAME_PART_SEPARATOR
-      . ($isRecorded ? static::LOCAL_THUMBNAIL_FILENAME_RECORDED_IDENTIFIER : static::LOCAL_THUMBNAIL_FILENAME_STREAM_IDENTIFIER)
-      . static::LOCAL_THUMBNAIL_FILENAME_PART_SEPARATOR
-      . sha1($videoOrChannelId);
+      . sha1($thumbnailReferenceId);
 
     $existingThumbnailFilenames = $this->fileSystem->scanDirectory($thumbnailsDirectory, '/^' . $thumbnailFileNameBase . '..*/');
     if (count($existingThumbnailFilenames) > 0) {
@@ -705,11 +674,11 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    * Generates a random thumbnail reference ID.
    *
    * @return string
-   *   New thumbnail reference ID (base-64 encoding of eight cryptographically
-   *   random bytes).
+   *   New thumbnail reference ID (a binary string consisting of eight
+   *   cryptographically random bytes).
    */
-  private static function generateThumbnailReferenceId() : string {
-    return base64_encode(random_bytes(8));
+  public static function generateFreshThumbnailReferenceId() : string {
+    return random_bytes(8);
   }
 
 }
