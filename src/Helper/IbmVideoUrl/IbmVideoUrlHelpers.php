@@ -249,12 +249,12 @@ final class IbmVideoUrlHelpers {
     }
 
     $needlePosition = strpos($haystack, $needle, $startPosition);
-    assert($needlePosition >= $startPosition);
     if ($needlePosition === FALSE) {
       // The needle was not found.
       return substr($haystack, $startPosition);
     }
     else {
+      assert($needlePosition >= $startPosition);
       return substr($haystack, $startPosition, $needlePosition - $startPosition);
     }
   }

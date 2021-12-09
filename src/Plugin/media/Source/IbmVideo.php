@@ -223,7 +223,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
         return parent::getMetadata($media, $name);
       }
       $videoData = [];
-      if (!$this->tryParseVideoData($videoDataJson, $videoData)) {
+      if ($this->tryParseVideoData($videoDataJson, $videoData) !== 0) {
         return parent::getMetadata($media, $name);
       }
       $videoData = json_decode($videoDataJson, TRUE);
