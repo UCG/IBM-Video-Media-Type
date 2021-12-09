@@ -479,7 +479,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
   private function prepareLocalThumbnailUri(string $videoOrChannelId, bool $isRecorded, string $thumbnailReferenceId) : ?string {
     $thumbnailsDirectory = $this->getValidThumbnailsDirectory();
     // Ensure the directory is created, and made writable if necessary.
-    if (!$this->fileSystem->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS)) {
+    if (!$this->fileSystem->prepareDirectory($thumbnailsDirectory, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS)) {
       throw new \RuntimeException('Could not prepare a writable thumbnails directory.');
     }
 
