@@ -166,23 +166,22 @@ EOS
     foreach ($values as $delta => &$itemValues) {
       assert(is_array($itemValues));
       $url = array_key_exists('url', $itemValues) ? ((string) $itemValues['url']) : '';
-      $thumbnailReferenceId = $values['thumbnail_reference_id'];
+      $thumbnailReferenceId = $itemValues['thumbnail_reference_id'];
       // Unset the "url" and "thumbnail_reference_id" elements, as they don't
       // actually correspond to field components (it they are just used to
       // temporarily store values so we can generate the actual field value).
-      unset($itemValues[$url]);
+      unset($itemValues['url']);
+      unset($itemValues['thumbnail_reference_id']);
       if ($url === '') {
         // We will end up with an entity validation error if we give an empty
         // value, so we just use some valid sample data.
         $itemValues['value'] = $this->getSampleVideoData();
       }
       else {
-        // $url might not be valid, and we want to make sure we set the field
-        // value to a harmless empty string if that is the case. We don't want
-        // to re-validate if it isn't necessary, on the other hand. Hence, we
-        // store the validation result for a given URL (along w/ the URL) in the
-        // $form_state. We then check this cached validation result (if it
-        // exists) here.
+        // $url might not be valid, but we don't want to re-validate it if not
+        // necessary. Hence, we store the validation result for a given URL
+        // (along w/ the URL) in the $form_state. We then check this cached
+        // validation result (if it exists) here.
         if (static::isEmbedUrlValid($url, $form_state)) {
           $id = '';
           $isRecorded = FALSE;
