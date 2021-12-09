@@ -66,31 +66,41 @@ class IbmVideoApiMediator {
       throw new IbmVideoApiBadResponseException('The IBM Video API returned a response with an invalid body.');
     }
 
-    // If there is no "thumbnail" key, just return NULL, as one can envision a
-    // situation where no such key exists if there is no thumbnail defined
-    // (although the documentation, https://developers.video.ibm.com/channel-api-video-management/basic-video-management#success-response),
-    // does not mention such a possibility).
-    if (!array_key_exists('thumbnail', $responseData)) {
-      return NULL;
-    }
-    $thumbnailSizes = $responseData['thumbnail'];
-    // Also return NULL if the thumbnail key is NULL or an empty array.
-    if ($thumbnailSizes === NULL || $thumbnailSizes === []) {
-      return NULL;
-    }
-    if (!is_array($thumbnailSizes)) {
-      throw new IbmVideoApiBadResponseException('The "thumbnails" key of the IBM Video response is invalid.');
-    }
+    if (array_key_exists('video', $responseData)) {
+      $videoData = $responseData['video'];
+      if (!is_array($videoData)) {
+        throw new IbmVideoApiBadResponseException('The IBM Video API returned a response without an invalid "video" element type.');
+      }
 
-    // Return the "default" thumbnail URI, if it exists. Note that the
-    // documentation does not explicitly say to expect the "default" key to
-    // exist (though it does say so for the corresponding case of a *video*
-    // thumbnail), but experimentation suggests it does...
-    if (!array_key_exists('default', $thumbnailSizes)) {
-      return NULL;
+      // If there is no "thumbnail" key, just return NULL, as one can envision a
+      // situation where no such key exists if there is no thumbnail defined
+      // (although the documentation, https://developers.video.ibm.com/channel-api-video-management/basic-video-management#success-response),
+      // does not mention such a possibility).
+      if (!array_key_exists('thumbnail', $responseData)) {
+        return NULL;
+      }
+      $thumbnailSizes = $responseData['thumbnail'];
+      // Also return NULL if the thumbnail key is NULL or an empty array.
+      if ($thumbnailSizes === NULL || $thumbnailSizes === []) {
+        return NULL;
+      }
+      if (!is_array($thumbnailSizes)) {
+        throw new IbmVideoApiBadResponseException('The "thumbnails" key of the IBM Video response is invalid.');
+      }
+
+      // Return the "default" thumbnail URI, if it exists. Note that the
+      // documentation does not explicitly say to expect the "default" key to
+      // exist (though it does say so for the corresponding case of a *video*
+      // thumbnail), but experimentation suggests it does...
+      if (!array_key_exists('default', $thumbnailSizes)) {
+        return NULL;
+      }
+      $defaultThumbnailUri = (string) $thumbnailSizes['defualt'];
+      return $defaultThumbnailUri === '' ? NULL : $defaultThumbnailUri;
     }
-    $defaultThumbnailUri = (string) $thumbnailSizes['defualt'];
-    return $defaultThumbnailUri === '' ? NULL : $defaultThumbnailUri;
+    else {
+      throw new IbmVideoApiBadResponseException('The IBM Video API returned a response without a root "video" key.');
+    }
   }
 
   /**
