@@ -8,7 +8,7 @@ id: media.ibm_video.field_ibm_video_data
 field_name: field_ibm_video_data
 entity_type: media
 bundle: ibm_video
-label: IBM Video Configuration
+label: IBM Video Data
 description: ''
 required: true
 translatable: false
