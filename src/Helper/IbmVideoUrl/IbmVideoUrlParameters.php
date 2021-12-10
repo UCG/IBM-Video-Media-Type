@@ -363,16 +363,16 @@ class IbmVideoUrlParameters {
     // the "useHtml5Ui" parameter, as is done in
     // https://support.video.ibm.com/hc/en-us/articles/207851927-Using-URL-Parameters-and-Embed-API-for-Custom-Players.
     $query = [
-      'initialVolume' => (string) $this->initialVolume,
-      'showTitle' => $trueFalseTextBoolConversion($this->showTitle),
-      'useAutoplay' => $trueFalseTextBoolConversion($this->useAutoplay),
-      'useHtml5Ui' => $this->useHtml5Ui ? '1' : '0',
+      'volume' => (string) $this->initialVolume,
+      'showtitle' => $trueFalseTextBoolConversion($this->showTitle),
+      'autoplay' => $trueFalseTextBoolConversion($this->useAutoplay),
+      'html5ui' => $this->useHtml5Ui ? '1' : '0',
     ];
     if ($this->defaultQuality !== static::DEFAULT_QUALITY_UNSPECIFIED) {
-      $query['defaultQuality'] = $defaultQualityStringRep;
+      $query['forced-quality'] = $defaultQualityStringRep;
     }
     if ($this->wMode !== static::WMODE_UNSPECIFIED) {
-      $query['wMode'] = $wModeStringRep;
+      $query['wmode'] = $wModeStringRep;
     }
 
     return UrlHelper::buildQuery($query);
