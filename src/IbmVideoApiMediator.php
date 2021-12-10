@@ -70,8 +70,8 @@ class IbmVideoApiMediator {
     }
 
     if (array_key_exists('channel', $responseData)) {
-      $videoData = $responseData['channel'];
-      if (!is_array($videoData)) {
+      $channelData = $responseData['channel'];
+      if (!is_array($channelData)) {
         throw new IbmVideoApiBadResponseException('The IBM Video API returned a response with an invalid "channel" element type.');
       }
 
@@ -79,10 +79,10 @@ class IbmVideoApiMediator {
       // situation where no such key exists if there is no thumbnail defined
       // (although the documentation, https://developers.video.ibm.com/channel-api-basic-channel-management),
       // does not mention such a possibility).
-      if (!array_key_exists('picture', $responseData)) {
+      if (!array_key_exists('picture', $channelData)) {
         return NULL;
       }
-      $thumbnailUris = $responseData['picture'];
+      $thumbnailUris = $channelData['picture'];
       // Also return NULL if the picture key is NULL or an empty array.
       if ($thumbnailUris === NULL || $thumbnailUris === []) {
         return NULL;
@@ -167,10 +167,10 @@ class IbmVideoApiMediator {
       // situation where no such key exists if there is no thumbnail defined
       // (although the documentation, https://developers.video.ibm.com/channel-api-video-management/basic-video-management),
       // does not mention such a possibility).
-      if (!array_key_exists('thumbnail', $responseData)) {
+      if (!array_key_exists('thumbnail', $videoData)) {
         return NULL;
       }
-      $thumbnailUris = $responseData['thumbnail'];
+      $thumbnailUris = $videoData['thumbnail'];
       // Also return NULL if the thumbnail key is NULL or an empty array.
       if ($thumbnailUris === NULL || $thumbnailUris === []) {
         return NULL;
