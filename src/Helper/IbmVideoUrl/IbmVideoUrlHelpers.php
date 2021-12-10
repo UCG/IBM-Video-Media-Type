@@ -29,18 +29,18 @@ final class IbmVideoUrlHelpers {
     . ')?(?:#' . self::REGEX_URL_FRAGMENT_LOWERCASE . ')?';
 
   /**
-   * Base URL (no scheme, query, or ID) for recorded video.
+   * Base embed URL (no scheme, query, or ID) for recorded video.
    *
    * @var string
    */
-  private const EMBED_URL_BASE_RECORDED = 'video.ibm.com/recorded/';
+  private const EMBED_URL_BASE_RECORDED = 'video.ibm.com/embed/recorded/';
 
   /**
-   * Base URL (no scheme, query, or ID) for streaming video.
+   * Base embed URL (no scheme, query, or ID) for streaming video.
    *
    * @var string
    */
-  private const EMBED_URL_BASE_STREAM = 'video.ibm.com/';
+  private const EMBED_URL_BASE_STREAM = 'video.ibm.com/embed/';
 
   /**
    * The regex for a valid lowercase URL path segment character.
