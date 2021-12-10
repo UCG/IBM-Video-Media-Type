@@ -366,6 +366,7 @@ class IbmVideoUrlParameters {
       'volume' => (string) $this->initialVolume,
       'showtitle' => $trueFalseTextBoolConversion($this->showTitle),
       'autoplay' => $trueFalseTextBoolConversion($this->useAutoplay),
+      'controls' => $trueFalseTextBoolConversion($this->displayControls),
       'html5ui' => $this->useHtml5Ui ? '1' : '0',
     ];
     if ($this->defaultQuality !== static::DEFAULT_QUALITY_UNSPECIFIED) {
