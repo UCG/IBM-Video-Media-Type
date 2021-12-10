@@ -183,7 +183,7 @@ class IbmVideoApiMediator {
       if (!array_key_exists('default', $thumbnailUris)) {
         return NULL;
       }
-      $defaultThumbnailUri = (string) $thumbnailUris['defualt'];
+      $defaultThumbnailUri = (string) $thumbnailUris['default'];
       return $defaultThumbnailUri === '' ? NULL : $defaultThumbnailUri;
     }
     else {
