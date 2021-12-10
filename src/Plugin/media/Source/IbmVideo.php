@@ -489,7 +489,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     $existingThumbnailFilenames = $this->fileSystem->scanDirectory($thumbnailsDirectory, '/^' . $thumbnailFileNameBase . '..*/');
     if (count($existingThumbnailFilenames) > 0) {
       // A thumbnail file already exists. Return the first one.
-      return (reset($existingThumbnailFilenames))['uri'];
+      return (string) (reset($existingThumbnailFilenames))->uri;
     }
 
     // Otherwise, we'll have to try to download the thumbnail. We will first
