@@ -498,7 +498,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     // need to retrieve the thumbnail of that particular video) or is a stream
     // (indicating we need to use the thumbnail for the corresponding channel).
     try {
-      $remoteThumbnailUri = $isRecorded ? $this->apiMediator->getDefaultVideoThumbnailUri($videoOrChannelId) : $this->apiMediator->getDefaultChannelThumbnailUri($videoOrChannelId);
+      $remoteThumbnailUri = $isRecorded ? $this->apiMediator->getDefaultVideoThumbnailUri($videoOrChannelId) : $this->apiMediator->getChannelThumbnailUri($videoOrChannelId);
     }
     catch (HttpTransferException $e) {
       $this->logger->warning('A transfer error occurred when attempting to download the thumbnail for {videoOrChannel} ID "{id}". Exception chain: {chain}',
