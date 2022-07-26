@@ -144,8 +144,8 @@ class IbmVideoWidget extends WidgetBase {
 <<<'EOS'
 The canonical embed URL for the video. Should be a URL starting with "https://",
 "http://", "//" or nothing at all (""), and followed by
-"video.ibm.com/recorded/[video ID]" (for a recorded video) or
-"video.ibm.com/[channel ID]" (for a stream), with an optional query string
+"video.ibm.com/embed/recorded/[video ID]" (for a recorded video) or
+"video.ibm.com/embed/[channel ID]" (for a stream), with an optional query string
 and/or fragment. This URL may be "cleaned up" before it is used to embed the
 video.
 EOS
