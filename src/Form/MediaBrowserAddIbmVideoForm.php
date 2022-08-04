@@ -52,7 +52,7 @@ class MediaBrowserAddIbmVideoForm extends AddFormBase {
       '#type' => 'container',
     ];
 
-    $element['container']['url'] = [
+    $form['container']['url'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Add IBM Video with URL'),
       '#description' => $this->t(
