@@ -122,20 +122,12 @@ class IbmVideoWidget extends WidgetBase {
     // Create a "fake" element for the thumbnail reference ID, that is processed
     // in order to set the ID as a submitted form "value."
     $element['thumbnail_reference_id'] = [
-      '#process' => [function (array &$element, FormStateInterface &$formState) use ($defaultVideoUrl, $currentThumbnailReferenceId) : void {
-        $urlElementPath = $element['#parents'];
-        array_pop($urlElementPath);
-        array_push($urlElementPath, 'url');
-        // Generate a new thumbnail reference ID for a new URL, in order to
-        // invalidate any cached thumbnail. Also generate a new ID if no old ID
-        // exists. Otherwise, use the old ID.
-        if (isset($currentThumbnailReferenceId) && $formState->getValue($urlElementPath) === $defaultVideoUrl) {
-          $formState->setValueForElement($element, $currentThumbnailReferenceId);
-        }
-        else {
-          $formState->setValueForElement($element, IbmVideo::generateFreshThumbnailReferenceId());
-        }
-      }],
+      '#custom' => [
+        // This data is used by the #process callback.
+        'default_video_url' => $defaultVideoUrl,
+        'current_thumbnail_reference_id' => $currentThumbnailReferenceId,
+      ],
+      '#process' => [[static::class, 'processThumbnailReferenceId']],
     ];
     $element['url'] = [
       '#type' => 'textfield',
@@ -154,12 +146,7 @@ EOS
       '#size' => 50,
       '#maxlength' => 120,
       '#required' => TRUE,
-      '#element_validate' => [function (array &$element, FormStateInterface &$formState) : void {
-        $url = (string) $formState->getValue($element['#parents']);
-        if ($url !== '' && !static::isEmbedUrlValid($url, $formState)) {
-          $formState->setErrorByName('url', 'Embed URL is not in the required format.');
-        }
-      }],
+      '#element_validate' => [[static::class, 'validateEmbedUrlInput']],
     ];
 
     return $element;
@@ -292,6 +279,80 @@ EOS
    */
   public static function isApplicable(FieldDefinitionInterface $field_definition) : bool {
     return MediaSourceFieldHelpers::doesFieldDefinitionHaveIbmVideoMediaSource($field_definition);
+  }
+
+  /**
+   * Processes the thumbnail reference ID form element.
+   *
+   * @param array $element
+   *   Form element.
+   * @param \Drupal\Core\Form\FormStateInterface $formState
+   *   Form state.
+   *
+   * @throws \RuntimeException
+   *   Sometimes thrown if something is wrong with $element. We don't throw an
+   *   \InvalidArgumentException because of how this function should be called.
+   */
+  public static function processThumbnailReferenceId(array &$element, FormStateInterface $formState) : void {
+    if (!isset($element['#parents'])) {
+      throw new \RuntimeException('The #parents form element item is missing.');
+    }
+    if (!array_key_exists('#custom', $element)) {
+      throw new \RuntimeException('The #custom form element item is missing.');
+    }
+
+    $customData = $element['#custom'];
+    if (!is_array($customData)) {
+      throw new \RuntimeException('The #custom form element item is invalid.');
+    }
+    if (!array_key_exists('current_thumbnail_reference_id', $customData)) {
+      throw new \RuntimeException('The #custom["current_thumbnail_reference_id"] form element item is missing.');
+    }
+    if (!array_key_exists('default_video_url', $customData)) {
+      throw new \RuntimeException('The #custom["default_video_url"] form element item is missing.');
+    }
+
+    $currentThumbnailReferenceId = $customData['current_thumbnail_reference_id'];
+    if ($currentThumbnailReferenceId !== NULL) $currentThumbnailReferenceId = (string) $currentThumbnailReferenceId;
+    $defaultVideoUrl = $customData['default_video_url'];
+    if ($defaultVideoUrl !== NULL) $defaultVideoUrl = (string) $defaultVideoUrl;
+
+    $urlElementPath = $element['#parents'];
+    if (array_pop($urlElementPath) === NULL) {
+      throw new \RuntimeException('The #parents form element item is invalid.');
+    }
+    array_push($urlElementPath, 'url');
+    // Generate a new thumbnail reference ID for a new URL, in order to
+    // invalidate any cached thumbnail. Also generate a new ID if no old ID
+    // exists. Otherwise, use the old ID.
+    if (isset($currentThumbnailReferenceId) && $formState->getValue($urlElementPath) === $defaultVideoUrl) {
+      $formState->setValueForElement($element, $currentThumbnailReferenceId);
+    }
+    else {
+      $formState->setValueForElement($element, IbmVideo::generateFreshThumbnailReferenceId());
+    }
+  }
+
+  /**
+   * Validates/sets errors for the embed URL input associated with $element.
+   *
+   * @param array $element
+   *   Form element.
+   * @param \Drupal\Core\Form\FormStateInterface $formState
+   *   Form state.
+   *
+   * @throws \RuntimeException
+   *   Sometimes thrown if something is wrong with $element. We don't throw an
+   *   \InvalidArgumentException because of how this function should be called.
+   */
+  public static function validateEmbedUrlInput(array &$element, FormStateInterface &$formState) : void {
+    if (!isset($element['#parents']) || !is_array($element['#parents'])) {
+      throw new \RuntimeException('The #parents form element item is missing or invalid.');
+    }
+    $url = (string) $formState->getValue($element['#parents']);
+    if ($url !== '' && !static::isEmbedUrlValid($url, $formState)) {
+      $formState->setErrorByName('url', 'Embed URL is not in the required format.');
+    }
   }
 
   /**

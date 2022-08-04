@@ -588,7 +588,7 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
       $this->logger->warning('The HEAD request to remote thumbnail URI "{uri}" returned status code {code} when code 200 was expected.',
         [
           'uri' => $remoteUri,
-          'message' => $e->getMessage(),
+          'message' => $response->getStatusCode(),
         ]);
       return NULL;
     }
