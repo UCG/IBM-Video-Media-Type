@@ -41,6 +41,9 @@ use Symfony\Component\Mime\MimeTypes;
  *   description = @Translation("Handles implementation logic for IBM Video media source."),
  *   allowed_field_types = {"string"},
  *   default_thumbnail_filename = "no-thumbnail.png",
+ *   forms = {
+ *     "media_library_add" = "\Drupal\ibm_video_media_type\Form\MediaBrowserAddIbmVideoForm",
+ *   },
  * )
  */
 class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInterface {
@@ -337,37 +340,6 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
     $display->setComponent($sourceFieldName, [
       'type' => 'ibm_video_input',
       'weight' => $display->getComponent($sourceFieldName)['weight'],
-    ]);
-  }
-
-  /**
-   * Assembles the given parameters for use in the source field value.
-   *
-   * @param string $videoOrChannelId
-   *   The video (for recorded videos) or channel (for streams) ID.
-   * @param bool $isRecordedFlag
-   *   Flag indicating whether the video is recorded (TRUE) or a stream (FALSE).
-   * @param string $thumbnailReferenceId
-   *   ID (non-empty ASCII string) which corresponds to the cached thumbnail
-   *   filename for this video. This ID can be altered if it is desirable to
-   *   invalidate a previously cached thumbnail. It is recommended to use
-   *   static::getFreshThumbnailReferenceId() to generate a thumbnail reference
-   *   ID, unless purposely re-using an old ID.
-   *
-   * @return string
-   *   Source field value generated from the function arguments.
-   *
-   * @throws \InvalidArgumentException
-   *   Thrown if $videoOrChannelId or $thumbnailReferenceId is empty.
-   */
-  public function prepareVideoData(string $videoOrChannelId, bool $isRecordedFlag, string $thumbnailReferenceId) : string {
-    ThrowHelpers::throwIfEmptyString($videoOrChannelId, 'videoOrChannelId');
-    ThrowHelpers::throwIfEmptyString($thumbnailReferenceId, 'thumbnailReferenceId');
-
-    return json_encode([
-      static::VIDEO_DATA_ID_PROPERTY_NAME => $videoOrChannelId,
-      static::VIDEO_DATA_RECORDED_FLAG_PROPERTY_NAME => $isRecordedFlag,
-      static::VIDEO_DATA_THUMBNAIL_REFERENCE_ID_PROPERTY_NAME => $thumbnailReferenceId,
     ]);
   }
 
@@ -679,6 +651,37 @@ class IbmVideo extends MediaSourceBase implements MediaSourceFieldConstraintsInt
    */
   public static function generateFreshThumbnailReferenceId() : string {
     return base64_encode(random_bytes(8));
+  }
+
+  /**
+   * Assembles the given parameters for use in the source field value.
+   *
+   * @param string $videoOrChannelId
+   *   The video (for recorded videos) or channel (for streams) ID.
+   * @param bool $isRecordedFlag
+   *   Flag indicating whether the video is recorded (TRUE) or a stream (FALSE).
+   * @param string $thumbnailReferenceId
+   *   ID (non-empty ASCII string) which corresponds to the cached thumbnail
+   *   filename for this video. This ID can be altered if it is desirable to
+   *   invalidate a previously cached thumbnail. It is recommended to use
+   *   static::getFreshThumbnailReferenceId() to generate a thumbnail reference
+   *   ID, unless purposely re-using an old ID.
+   *
+   * @return string
+   *   Source field value generated from the function arguments.
+   *
+   * @throws \InvalidArgumentException
+   *   Thrown if $videoOrChannelId or $thumbnailReferenceId is empty.
+   */
+  public static function prepareVideoData(string $videoOrChannelId, bool $isRecordedFlag, string $thumbnailReferenceId) : string {
+    ThrowHelpers::throwIfEmptyString($videoOrChannelId, 'videoOrChannelId');
+    ThrowHelpers::throwIfEmptyString($thumbnailReferenceId, 'thumbnailReferenceId');
+
+    return json_encode([
+      static::VIDEO_DATA_ID_PROPERTY_NAME => $videoOrChannelId,
+      static::VIDEO_DATA_RECORDED_FLAG_PROPERTY_NAME => $isRecordedFlag,
+      static::VIDEO_DATA_THUMBNAIL_REFERENCE_ID_PROPERTY_NAME => $thumbnailReferenceId,
+    ]);
   }
 
 }
