@@ -9,7 +9,7 @@
     }
   ],
   "require": {
-    "ucg/ranine": "dev-master",
+    "ucg/ranine": "~1.0",
     "php": ">=7.4"
   }
 }
