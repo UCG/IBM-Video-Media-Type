@@ -9,7 +9,7 @@
     }
   ],
   "require": {
-    "ucg/ranine": "~1.0",
+    "ucg/ranine": "^1 || ^2",
     "php": ">=7.4"
   }
 }
